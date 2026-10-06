@@ -1,0 +1,30 @@
+{
+  "name": "Video Fetch",
+  "short_name": "Video Fetch",
+  "description": "Video Fetch adalah pengunduh video MP4 yang cepat dan mudah digunakan.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "id",
+  "categories": [
+    "video",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
