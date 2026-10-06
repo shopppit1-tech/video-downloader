@@ -440,82 +440,545 @@ app.post("/api/info", async (req, res) => {
       /not a bot/i.test(message) ||
       /captcha/i.test(message)
     ) {
-      return res.status(429).json({
+const express = require("express");
+const rateLimit = require("express-rate-limit");
+const { spawn } = require("node:child_process");
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const fsp = require("node:fs/promises");
+const path = require("node:path");
+require("dotenv").config();
+
+const app = express();
+
+const PORT = Number(process.env.PORT || 3000);
+const FILE_TTL_MS =
+  Number(process.env.FILE_TTL_MINUTES || 30) * 60 * 1000;
+const MAX_CONCURRENT_DOWNLOADS =
+  Number(process.env.MAX_CONCURRENT_DOWNLOADS || 2);
+const MAX_VIDEO_DURATION =
+  Number(process.env.MAX_VIDEO_DURATION_SECONDS || 7200);
+
+const TEMP_DIR = path.join(__dirname, "temp");
+const COOKIE_FILE = path.join(TEMP_DIR, "youtube-cookies.txt");
+
+const jobs = new Map();
+let activeDownloads = 0;
+
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+
+app.use(express.json({ limit: "10kb" }));
+app.use(express.static(path.join(__dirname, "public")));
+
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 30,
+    standardHeaders: true,
+    legacyHeaders: false
+  })
+);
+
+
+/* =========================
+   YOUTUBE URL
+========================= */
+
+function extractYouTubeId(input) {
+  let url;
+
+  try {
+    url = new URL(input);
+  } catch {
+    return null;
+  }
+
+  const host = url.hostname
+    .toLowerCase()
+    .replace(/^www\./, "");
+
+  if (host === "youtu.be") {
+    const id = url.pathname.slice(1).split("/")[0];
+    return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+  }
+
+  if (
+    ![
+      "youtube.com",
+      "m.youtube.com",
+      "music.youtube.com"
+    ].includes(host)
+  ) {
+    return null;
+  }
+
+  if (url.pathname === "/watch") {
+    const id = url.searchParams.get("v");
+    return id && /^[A-Za-z0-9_-]{11}$/.test(id)
+      ? id
+      : null;
+  }
+
+  const match = url.pathname.match(
+    /^\/(?:shorts|embed|live)\/([A-Za-z0-9_-]{11})(?:\/|$)/
+  );
+
+  return match ? match[1] : null;
+}
+
+function youtubeUrl(id) {
+  return `https://www.youtube.com/watch?v=${id}`;
+}
+
+
+/* =========================
+   COOKIE
+========================= */
+
+async function prepareCookies() {
+  const cookies = process.env.YOUTUBE_COOKIES;
+
+  if (!cookies || !cookies.trim()) {
+    return false;
+  }
+
+  await fsp.writeFile(
+    COOKIE_FILE,
+    cookies,
+    "utf8"
+  );
+
+  return true;
+}
+
+
+/* =========================
+   COMMAND
+========================= */
+
+function run(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      windowsHide: true,
+      env: process.env
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", chunk => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on("data", chunk => {
+      stderr += chunk.toString();
+    });
+
+    child.on("error", error => {
+      reject(
+        new Error(
+          `${command} tidak tersedia: ${error.message}`
+        )
+      );
+    });
+
+    child.on("close", code => {
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        reject(
+          new Error(
+            `${command} berhenti dengan kode ${code}: ${stderr.slice(-5000)}`
+          )
+        );
+      }
+    });
+  });
+}
+
+
+/* =========================
+   YT-DLP
+========================= */
+
+function ytDlpArgs() {
+  const args = [
+    "--no-playlist",
+    "--no-warnings",
+    "--js-runtimes",
+    "node",
+    "--remote-components",
+    "ejs:npm"
+  ];
+
+  if (process.env.YOUTUBE_COOKIES) {
+    args.push(
+      "--cookies",
+      COOKIE_FILE
+    );
+  }
+
+  if (process.env.YOUTUBE_USER_AGENT) {
+    args.push(
+      "--user-agent",
+      process.env.YOUTUBE_USER_AGENT
+    );
+  }
+
+  return args;
+}
+
+
+/* =========================
+   VIDEO INFO
+========================= */
+
+function publicVideoInfo(info) {
+  const formats = Array.isArray(info.formats)
+    ? info.formats
+    : [];
+
+  const heights = [
+    ...new Set(
+      formats
+        .filter(
+          f =>
+            f.vcodec &&
+            f.vcodec !== "none" &&
+            Number.isFinite(f.height)
+        )
+        .map(f => f.height)
+    )
+  ]
+    .sort((a, b) => b - a)
+    .slice(0, 12);
+
+  return {
+    id: info.id,
+    title: info.title || "Video",
+    thumbnail: info.thumbnail || null,
+    duration: Number(info.duration || 0),
+    uploader: info.uploader || null,
+    heights,
+    hasAudio: formats.some(
+      f =>
+        f.acodec &&
+        f.acodec !== "none"
+    )
+  };
+}
+
+
+/* =========================
+   INFO
+========================= */
+
+async function inspectVideo(videoId) {
+  await prepareCookies();
+
+  const args = [
+    ...ytDlpArgs(),
+    "--dump-single-json",
+    youtubeUrl(videoId)
+  ];
+
+  const result = await run(
+    "yt-dlp",
+    args
+  );
+
+  return JSON.parse(result.stdout);
+}
+
+
+/* =========================
+   FILE
+========================= */
+
+async function removeFile(filePath) {
+  if (!filePath) return;
+
+  await fsp.rm(
+    filePath,
+    { force: true }
+  ).catch(() => {});
+}
+
+function scheduleDeletion(jobId, filePath) {
+  const timer = setTimeout(async () => {
+    await removeFile(filePath);
+    jobs.delete(jobId);
+  }, FILE_TTL_MS);
+
+  timer.unref();
+}
+
+
+/* =========================
+   DOWNLOAD
+========================= */
+
+async function createDownload(
+  jobId,
+  videoId,
+  requestedHeight
+) {
+  const job = jobs.get(jobId);
+
+  try {
+    await prepareCookies();
+
+    const height = Math.min(
+      Math.max(
+        Number(requestedHeight) || 1080,
+        144
+      ),
+      2160
+    );
+
+    await fsp.mkdir(
+      TEMP_DIR,
+      { recursive: true }
+    );
+
+    const outputTemplate = path.join(
+      TEMP_DIR,
+      `${jobId}.%(ext)s`
+    );
+
+    const format = [
+      `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
+      `bv*[height<=${height}]+ba`,
+      `b[height<=${height}]`,
+      "b"
+    ].join("/");
+
+    const args = [
+      ...ytDlpArgs(),
+
+      "--format",
+      format,
+
+      "--merge-output-format",
+      "mp4",
+
+      "--remux-video",
+      "mp4",
+
+      "--restrict-filenames",
+
+      "--output",
+      outputTemplate,
+
+      youtubeUrl(videoId)
+    ];
+
+    console.log(
+      `DOWNLOAD: ${videoId} ${height}p`
+    );
+
+    await run(
+      "yt-dlp",
+      args
+    );
+
+    const files =
+      await fsp.readdir(TEMP_DIR);
+
+    const generatedName =
+      files.find(
+        name =>
+          name.startsWith(`${jobId}.`) &&
+          !name.endsWith(".part") &&
+          !name.endsWith(".ytdl")
+      );
+
+    if (!generatedName) {
+      throw new Error(
+        "File hasil tidak ditemukan."
+      );
+    }
+
+    const filePath =
+      path.join(
+        TEMP_DIR,
+        generatedName
+      );
+
+    const stats =
+      await fsp.stat(filePath);
+
+    job.status = "ready";
+    job.filePath = filePath;
+    job.size = stats.size;
+    job.expiresAt =
+      Date.now() + FILE_TTL_MS;
+
+    scheduleDeletion(
+      jobId,
+      filePath
+    );
+
+  } catch (error) {
+    job.status = "failed";
+    job.error =
+      "Video gagal diproses.";
+
+    console.error(
+      `DOWNLOAD ERROR [${videoId}]:`,
+      error.message
+    );
+
+  } finally {
+    activeDownloads--;
+  }
+}
+
+
+/* =========================
+   API INFO
+========================= */
+
+app.post(
+  "/api/info",
+  async (req, res) => {
+    const videoId =
+      extractYouTubeId(
+        String(
+          req.body?.url || ""
+        ).trim()
+      );
+
+    if (!videoId) {
+      return res.status(400).json({
         error:
-          "YouTube menolak permintaan dari server. Coba lagi nanti atau gunakan video yang dapat diakses publik.",
+          "URL YouTube tidak valid."
       });
     }
 
-    if (
-      /private video/i.test(message) ||
-      /video unavailable/i.test(message)
-    ) {
+    try {
+      console.log(
+        `INFO REQUEST: ${videoId}`
+      );
+
+      const info =
+        await inspectVideo(videoId);
+
+      if (info.is_live) {
+        return res.status(400).json({
+          error:
+            "Siaran langsung yang sedang berlangsung tidak didukung."
+        });
+      }
+
+      if (
+        info.duration &&
+        info.duration > MAX_VIDEO_DURATION
+      ) {
+        return res.status(413).json({
+          error:
+            `Durasi video melebihi batas ${Math.round(
+              MAX_VIDEO_DURATION / 60
+            )} menit.`
+        });
+      }
+
+      return res.json(
+        publicVideoInfo(info)
+      );
+
+    } catch (error) {
+      console.error(
+        `INFO ERROR [${videoId}]:`,
+        error.message
+      );
+
+      const msg =
+        error.message || "";
+
+      if (
+        /sign in to confirm/i.test(msg) ||
+        /not a bot/i.test(msg) ||
+        /captcha/i.test(msg)
+      ) {
+        return res.status(429).json({
+          error:
+            "YouTube menolak permintaan server."
+        });
+      }
+
       return res.status(422).json({
         error:
-          "Video privat atau tidak tersedia.",
+          "Informasi video tidak dapat diambil."
       });
     }
-
-    return res.status(422).json({
-      error:
-        "Informasi video tidak dapat diambil.",
-    });
   }
-});
+);
 
 
 /* =========================
    API DOWNLOAD
 ========================= */
 
-app.post("/api/download", (req, res) => {
-  if (
-    activeDownloads >=
-    maxConcurrentDownloads
-  ) {
-    return res.status(429).json({
-      error:
-        "Server sedang sibuk. Coba lagi setelah proses lain selesai.",
+app.post(
+  "/api/download",
+  (req, res) => {
+    if (
+      activeDownloads >=
+      MAX_CONCURRENT_DOWNLOADS
+    ) {
+      return res.status(429).json({
+        error:
+          "Server sedang sibuk. Coba lagi nanti."
+      });
+    }
+
+    const videoId =
+      String(
+        req.body?.videoId || ""
+      );
+
+    const height =
+      Number(
+        req.body?.height || 1080
+      );
+
+    if (
+      !/^[A-Za-z0-9_-]{11}$/.test(
+        videoId
+      )
+    ) {
+      return res.status(400).json({
+        error:
+          "ID video tidak valid."
+      });
+    }
+
+    const jobId =
+      crypto.randomUUID();
+
+    jobs.set(jobId, {
+      status: "processing",
+      videoId,
+      createdAt: Date.now(),
+      filePath: null
+    });
+
+    activeDownloads++;
+
+    void createDownload(
+      jobId,
+      videoId,
+      height
+    );
+
+    return res.status(202).json({
+      jobId
     });
   }
-
-  const videoId = String(
-    req.body?.videoId || ""
-  );
-
-  const height = Number(
-    req.body?.height || 1080
-  );
-
-  if (!/^[\w-]{11}$/.test(videoId)) {
-    return res.status(400).json({
-      error:
-        "ID video tidak valid.",
-    });
-  }
-
-  const jobId =
-    crypto.randomUUID();
-
-  jobs.set(jobId, {
-    status: "processing",
-    videoId,
-    createdAt: Date.now(),
-    filePath: null,
-  });
-
-  activeDownloads += 1;
-
-  void createDownload(
-    jobId,
-    videoId,
-    height
-  );
-
-  return res.status(202).json({
-    jobId,
-  });
-});
+);
 
 
 /* =========================
@@ -531,7 +994,7 @@ app.get(
     if (!job) {
       return res.status(404).json({
         error:
-          "Proses tidak ditemukan atau file sudah dihapus.",
+          "Proses tidak ditemukan atau file sudah dihapus."
       });
     }
 
@@ -545,7 +1008,7 @@ app.get(
       downloadUrl:
         job.status === "ready"
           ? `/api/jobs/${req.params.jobId}/file`
-          : null,
+          : null
     });
   }
 );
@@ -568,7 +1031,7 @@ app.get(
     ) {
       return res.status(404).json({
         error:
-          "File belum siap atau sudah dihapus.",
+          "File belum siap atau sudah dihapus."
       });
     }
 
@@ -581,7 +1044,7 @@ app.get(
 
       return res.status(410).json({
         error:
-          "File sudah kedaluwarsa.",
+          "File sudah kedaluwarsa."
       });
     }
 
@@ -593,14 +1056,14 @@ app.get(
     res.download(
       job.filePath,
       "video.mp4",
-      async (error) => {
+      async error => {
         if (
           error &&
           !res.headersSent
         ) {
           res.status(500).json({
             error:
-              "Pengiriman file gagal.",
+              "Pengiriman file gagal."
           });
         }
 
@@ -626,13 +1089,16 @@ setInterval(
     const now = Date.now();
 
     for (
-      const [jobId, job] of jobs
+      const [jobId, job]
+      of jobs
     ) {
       if (
         now - job.createdAt >
-          fileTtlMs ||
-        (job.expiresAt &&
-          now > job.expiresAt)
+          FILE_TTL_MS ||
+        (
+          job.expiresAt &&
+          now > job.expiresAt
+        )
       ) {
         await removeFile(
           job.filePath
@@ -652,24 +1118,26 @@ setInterval(
 
 async function start() {
   await fsp.mkdir(
-    tempDir,
+    TEMP_DIR,
     { recursive: true }
   );
 
   app.listen(
-    port,
+    PORT,
     "0.0.0.0",
     () => {
       console.log(
-        `Server aktif di port ${port}`
+        `Server aktif di port ${PORT}`
       );
     }
   );
 }
 
-start().catch(
-  (error) => {
-    console.error(error);
-    process.exit(1);
-  }
-);
+start().catch(error => {
+  console.error(
+    "SERVER ERROR:",
+    error
+  );
+
+  process.exit(1);
+});
