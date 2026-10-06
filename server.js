@@ -1,35 +1,37 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
-const { spawn } = require("child_process");
-const crypto = require("crypto");
-const fs = require("fs");
-const fsp = require("fs/promises");
-const path = require("path");
-
+const { spawn } = require("node:child_process");
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const fsp = require("node:fs/promises");
+const path = require("node:path");
 require("dotenv").config();
 
 const app = express();
+const port = Number(process.env.PORT || 3000);
 
-const PORT = Number(process.env.PORT || 3000);
-const TEMP_DIR = path.join(__dirname, "temp");
+const fileTtlMs =
+  Number(process.env.FILE_TTL_MINUTES || 30) * 60 * 1000;
 
-const FILE_TTL =
-  Number(process.env.FILE_TTL_MINUTES || 30) *
-  60 *
-  1000;
-
-const MAX_CONCURRENT =
+const maxConcurrentDownloads =
   Number(process.env.MAX_CONCURRENT_DOWNLOADS || 2);
 
-const MAX_DURATION =
+const maxVideoDuration =
   Number(process.env.MAX_VIDEO_DURATION_SECONDS || 7200);
 
-let activeDownloads = 0;
+const tempDir = path.join(__dirname, "temp");
 
 const jobs = new Map();
+let activeDownloads = 0;
 
-app.set("trust proxy", 1);
 app.disable("x-powered-by");
+
+/*
+ * Render berada di belakang reverse proxy.
+ * Ini wajib agar express-rate-limit tidak error
+ * karena X-Forwarded-For.
+ */
+app.set("trust proxy", 1);
 
 app.use(express.json({ limit: "10kb" }));
 
@@ -41,16 +43,15 @@ app.use(
     windowMs: 15 * 60 * 1000,
     limit: 30,
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
   })
 );
-
 
 /* =========================
    YOUTUBE URL
 ========================= */
 
-function getVideoId(input) {
+function extractYouTubeId(input) {
   let url;
 
   try {
@@ -64,19 +65,16 @@ function getVideoId(input) {
     .replace(/^www\./, "");
 
   if (host === "youtu.be") {
-    const id = url.pathname
-      .slice(1)
-      .split("/")[0];
-
-    return /^[A-Za-z0-9_-]{11}$/.test(id)
-      ? id
-      : null;
+    const id = url.pathname.slice(1);
+    return /^[\w-]{11}$/.test(id) ? id : null;
   }
 
   if (
-    host !== "youtube.com" &&
-    host !== "m.youtube.com" &&
-    host !== "music.youtube.com"
+    ![
+      "youtube.com",
+      "m.youtube.com",
+      "music.youtube.com",
+    ].includes(host)
   ) {
     return null;
   }
@@ -84,120 +82,132 @@ function getVideoId(input) {
   if (url.pathname === "/watch") {
     const id = url.searchParams.get("v");
 
-    return id &&
-      /^[A-Za-z0-9_-]{11}$/.test(id)
+    return id && /^[\w-]{11}$/.test(id)
       ? id
       : null;
   }
 
   const match = url.pathname.match(
-    /^\/(?:shorts|embed|live)\/([A-Za-z0-9_-]{11})/
+    /^\/(?:shorts|embed|live)\/([\w-]{11})(?:\/|$)/
   );
 
   return match ? match[1] : null;
 }
 
-
-function youtubeUrl(id) {
-  return `https://www.youtube.com/watch?v=${id}`;
+function youtubeUrl(videoId) {
+  return `https://www.youtube.com/watch?v=${videoId}`;
 }
 
+/* =========================
+   COMMAND RUNNER
+========================= */
+
+function run(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      windowsHide: true,
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout?.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr?.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on("error", (error) => {
+      reject(
+        new Error(
+          `${command} tidak tersedia: ${error.message}`
+        )
+      );
+    });
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve({
+          stdout,
+          stderr,
+        });
+      } else {
+        reject(
+          new Error(
+            `${command} berhenti dengan kode ${code}: ${stderr.slice(
+              -4000
+            )}`
+          )
+        );
+      }
+    });
+  });
+}
 
 /* =========================
    COOKIES
 ========================= */
 
 async function setupCookies() {
-  const cookies = process.env.YOUTUBE_COOKIES;
+  const cookies = String(
+    process.env.YOUTUBE_COOKIES || ""
+  ).trim();
 
-  if (!cookies || !cookies.trim()) {
+  if (!cookies) {
     return null;
   }
 
-  await fsp.mkdir(TEMP_DIR, {
-    recursive: true
-  });
-
-  const file = path.join(
-    TEMP_DIR,
+  const cookieFile = path.join(
+    tempDir,
     "youtube-cookies.txt"
   );
 
   await fsp.writeFile(
-    file,
+    cookieFile,
     cookies,
     "utf8"
   );
 
-  return file;
+  return cookieFile;
 }
 
-
 /* =========================
-   RUN COMMAND
-========================= */
-
-function run(command, args) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      env: process.env
-    });
-
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout.on("data", data => {
-      stdout += data.toString();
-    });
-
-    child.stderr.on("data", data => {
-      stderr += data.toString();
-    });
-
-    child.on("error", error => {
-      reject(error);
-    });
-
-    child.on("close", code => {
-      if (code === 0) {
-        resolve({
-          stdout,
-          stderr
-        });
-        return;
-      }
-
-      reject(
-        new Error(
-          `${command} exited ${code}: ${stderr.slice(-5000)}`
-        )
-      );
-    });
-  });
-}
-
-
-/* =========================
-   YT-DLP ARGUMENTS
+   YT-DLP BASE ARGS
 ========================= */
 
 async function baseYtDlpArgs() {
   const args = [
     "--no-playlist",
     "--no-warnings",
+
+    /*
+     * YouTube sekarang membutuhkan JS runtime
+     * untuk beberapa extraction flow.
+     */
     "--js-runtimes",
     "node",
+
+    /*
+     * Ambil EJS dari GitHub.
+     */
     "--remote-components",
-    "ejs:npm"
+    "ejs:github",
   ];
 
-  const cookieFile =
-    await setupCookies();
+  const cookieFile = await setupCookies();
 
+  /*
+   * Jika cookies tersedia, gunakan player client
+   * yang menghindari masalah tv_downgraded.
+   */
   if (cookieFile) {
     args.push(
       "--cookies",
-      cookieFile
+      cookieFile,
+      "--extractor-args",
+      "youtube:player_client=default,web_embedded"
     );
   }
 
@@ -211,97 +221,99 @@ async function baseYtDlpArgs() {
   return args;
 }
 
-
 /* =========================
-   VIDEO INFO
+   PUBLIC VIDEO INFO
 ========================= */
 
-function cleanInfo(info) {
-  const formats =
-    Array.isArray(info.formats)
-      ? info.formats
-      : [];
+function publicVideoInfo(info) {
+  const formats = Array.isArray(info.formats)
+    ? info.formats
+    : [];
 
   const heights = [
     ...new Set(
       formats
         .filter(
-          f =>
+          (f) =>
             f.vcodec &&
             f.vcodec !== "none" &&
             Number.isFinite(f.height)
         )
-        .map(f => f.height)
-    )
+        .map((f) => f.height)
+    ),
   ]
     .sort((a, b) => b - a)
     .slice(0, 12);
 
   return {
     id: info.id,
-    title: info.title || "Video",
+    title: info.title || "video",
     thumbnail: info.thumbnail || null,
     duration: Number(info.duration || 0),
     uploader: info.uploader || null,
     heights,
     hasAudio: formats.some(
-      f =>
+      (f) =>
         f.acodec &&
         f.acodec !== "none"
-    )
+    ),
   };
 }
 
-
-async function getInfo(videoId) {
-  const args =
-    await baseYtDlpArgs();
-
-  args.push(
-    "--dump-single-json",
-    youtubeUrl(videoId)
-  );
-
-  const result =
-    await run("yt-dlp", args);
-
-  return JSON.parse(
-    result.stdout
-  );
-}
-
-
 /* =========================
-   DELETE FILE
+   FILE CLEANUP
 ========================= */
 
-async function deleteFile(file) {
-  if (!file) return;
+async function removeFile(filePath) {
+  if (!filePath) return;
 
-  await fsp.rm(file, {
-    force: true
-  }).catch(() => {});
+  await fsp
+    .rm(filePath, {
+      force: true,
+    })
+    .catch((error) => {
+      console.error(
+        "Gagal menghapus file:",
+        error.message
+      );
+    });
 }
 
-
-function expireJob(jobId, file) {
-  const timer = setTimeout(
-    async () => {
-      await deleteFile(file);
-      jobs.delete(jobId);
-    },
-    FILE_TTL
-  );
+function scheduleDeletion(jobId, filePath) {
+  const timer = setTimeout(async () => {
+    await removeFile(filePath);
+    jobs.delete(jobId);
+  }, fileTtlMs);
 
   timer.unref();
 }
 
+/* =========================
+   VIDEO INFO
+========================= */
+
+async function inspectVideo(videoId) {
+  const baseArgs = await baseYtDlpArgs();
+
+  const args = [
+    ...baseArgs,
+    "--dump-single-json",
+    youtubeUrl(videoId),
+  ];
+
+  const { stdout } = await run(
+    "yt-dlp",
+    args
+  );
+
+  return JSON.parse(stdout);
+}
 
 /* =========================
    DOWNLOAD
 ========================= */
 
-async function downloadVideo(
+async function createDownload(
   jobId,
   videoId,
   requestedHeight
@@ -309,10 +321,6 @@ async function downloadVideo(
   const job = jobs.get(jobId);
 
   try {
-    await fsp.mkdir(TEMP_DIR, {
-      recursive: true
-    });
-
     const height = Math.min(
       Math.max(
         Number(requestedHeight) || 1080,
@@ -321,110 +329,103 @@ async function downloadVideo(
       2160
     );
 
-    const output =
-      path.join(
-        TEMP_DIR,
-        `${jobId}.%(ext)s`
-      );
+    const outputTemplate = path.join(
+      tempDir,
+      `${jobId}.%(ext)s`
+    );
 
     const format = [
       `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
       `bv*[height<=${height}]+ba`,
       `b[height<=${height}]`,
-      "b"
+      "b",
     ].join("/");
 
-    const args =
-      await baseYtDlpArgs();
+    const baseArgs = await baseYtDlpArgs();
 
-    args.push(
+    const args = [
+      ...baseArgs,
+
+      "--no-part",
+      "--restrict-filenames",
+
       "--format",
       format,
+
       "--merge-output-format",
       "mp4",
+
       "--remux-video",
       "mp4",
-      "--restrict-filenames",
-      "--output",
-      output,
-      youtubeUrl(videoId)
-    );
 
-    console.log(
-      `DOWNLOAD ${videoId} ${height}p`
-    );
+      "--output",
+      outputTemplate,
+
+      youtubeUrl(videoId),
+    ];
 
     await run(
       "yt-dlp",
       args
     );
 
-    const files =
-      await fsp.readdir(TEMP_DIR);
+    const candidates =
+      await fsp.readdir(tempDir);
 
-    const name =
-      files.find(
-        f =>
-          f.startsWith(jobId + ".") &&
-          !f.endsWith(".part") &&
-          !f.endsWith(".ytdl")
+    const generatedName =
+      candidates.find(
+        (name) =>
+          name.startsWith(`${jobId}.`) &&
+          !name.endsWith(".part")
       );
 
-    if (!name) {
+    if (!generatedName) {
       throw new Error(
-        "File hasil tidak ditemukan"
+        "File hasil pemrosesan tidak ditemukan."
       );
     }
 
-    const file =
-      path.join(
-        TEMP_DIR,
-        name
-      );
+    const filePath = path.join(
+      tempDir,
+      generatedName
+    );
 
-    const stat =
-      await fsp.stat(file);
+    const stats =
+      await fsp.stat(filePath);
 
     job.status = "ready";
-    job.filePath = file;
-    job.size = stat.size;
+    job.filePath = filePath;
+    job.size = stats.size;
     job.expiresAt =
-      Date.now() + FILE_TTL;
+      Date.now() + fileTtlMs;
 
-    expireJob(
+    scheduleDeletion(
       jobId,
-      file
+      filePath
     );
-
-    console.log(
-      `READY ${videoId}`
-    );
-
   } catch (error) {
     job.status = "failed";
+
     job.error =
-      "Video gagal diproses.";
+      "Video tidak dapat diproses. Pastikan URL dapat diakses dan yt-dlp/FFmpeg terpasang.";
 
     console.error(
-      "DOWNLOAD ERROR:",
-      error.message
+      `[${videoId}] ${error.message}`
     );
-
   } finally {
-    activeDownloads--;
+    activeDownloads -= 1;
   }
 }
 
-
 /* =========================
-   INFO API
+   API INFO
 ========================= */
 
 app.post(
   "/api/info",
   async (req, res) => {
     const videoId =
-      getVideoId(
+      extractYouTubeId(
         String(
           req.body?.url || ""
         ).trim()
@@ -433,71 +434,55 @@ app.post(
     if (!videoId) {
       return res.status(400).json({
         error:
-          "URL YouTube tidak valid."
+          "URL YouTube tidak valid.",
       });
     }
 
-    try {
-      console.log(
-        "INFO REQUEST:",
-        videoId
-      );
+    console.log(
+      `REQUEST: ${videoId}`
+    );
 
+    try {
       const info =
-        await getInfo(videoId);
+        await inspectVideo(videoId);
 
       if (info.is_live) {
         return res.status(400).json({
           error:
-            "Siaran langsung tidak didukung."
+            "Siaran langsung yang belum selesai tidak didukung.",
         });
       }
 
       if (
         info.duration &&
-        info.duration > MAX_DURATION
+        info.duration >
+          maxVideoDuration
       ) {
         return res.status(413).json({
-          error:
-            "Durasi video terlalu panjang."
+          error: `Durasi video melebihi batas ${Math.round(
+            maxVideoDuration / 60
+          )} menit.`,
         });
       }
 
       return res.json(
-        cleanInfo(info)
+        publicVideoInfo(info)
       );
-
     } catch (error) {
       console.error(
-        "INFO ERROR:",
-        error.message
+        `ERROR [${videoId}]: ${error.message}`
       );
-
-      const msg =
-        error.message || "";
-
-      if (
-        /sign in to confirm/i.test(msg) ||
-        /not a bot/i.test(msg) ||
-        /captcha/i.test(msg)
-      ) {
-        return res.status(429).json({
-          error:
-            "YouTube menolak permintaan dari server."
-        });
-      }
 
       return res.status(422).json({
         error:
-          "Informasi video tidak dapat diambil."
+          "Informasi video tidak dapat diambil. Video mungkin privat, dibatasi, atau tidak tersedia.",
       });
     }
   }
 );
 
-
 /* =========================
-   DOWNLOAD API
+   API DOWNLOAD
 ========================= */
 
 app.post(
@@ -505,11 +490,11 @@ app.post(
   (req, res) => {
     if (
       activeDownloads >=
-      MAX_CONCURRENT
+      maxConcurrentDownloads
     ) {
       return res.status(429).json({
         error:
-          "Server sedang sibuk."
+          "Server sedang sibuk. Coba lagi setelah proses lain selesai.",
       });
     }
 
@@ -524,13 +509,13 @@ app.post(
       );
 
     if (
-      !/^[A-Za-z0-9_-]{11}$/.test(
+      !/^[\w-]{11}$/.test(
         videoId
       )
     ) {
       return res.status(400).json({
         error:
-          "ID video tidak valid."
+          "ID video tidak valid.",
       });
     }
 
@@ -541,26 +526,25 @@ app.post(
       status: "processing",
       videoId,
       createdAt: Date.now(),
-      filePath: null
+      filePath: null,
     });
 
-    activeDownloads++;
+    activeDownloads += 1;
 
-    downloadVideo(
+    void createDownload(
       jobId,
       videoId,
       height
     );
 
     return res.status(202).json({
-      jobId
+      jobId,
     });
   }
 );
 
-
 /* =========================
-   JOB STATUS
+   API JOB STATUS
 ========================= */
 
 app.get(
@@ -574,7 +558,7 @@ app.get(
     if (!job) {
       return res.status(404).json({
         error:
-          "Proses tidak ditemukan."
+          "Proses tidak ditemukan atau file sudah dihapus.",
       });
     }
 
@@ -588,14 +572,13 @@ app.get(
       downloadUrl:
         job.status === "ready"
           ? `/api/jobs/${req.params.jobId}/file`
-          : null
+          : null,
     });
   }
 );
 
-
 /* =========================
-   FILE API
+   FILE DOWNLOAD
 ========================= */
 
 app.get(
@@ -613,7 +596,7 @@ app.get(
     ) {
       return res.status(404).json({
         error:
-          "File belum siap."
+          "File belum siap atau sudah dihapus.",
       });
     }
 
@@ -628,7 +611,7 @@ app.get(
 
       return res.status(410).json({
         error:
-          "File sudah kedaluwarsa."
+          "File sudah kedaluwarsa.",
       });
     }
 
@@ -640,18 +623,18 @@ app.get(
     res.download(
       job.filePath,
       "video.mp4",
-      async error => {
+      async (error) => {
         if (
           error &&
           !res.headersSent
         ) {
           res.status(500).json({
             error:
-              "Pengiriman file gagal."
+              "Pengiriman file gagal.",
           });
         }
 
-        await deleteFile(
+        await removeFile(
           job.filePath
         );
 
@@ -663,9 +646,8 @@ app.get(
   }
 );
 
-
 /* =========================
-   CLEANUP
+   PERIODIC CLEANUP
 ========================= */
 
 setInterval(
@@ -679,48 +661,51 @@ setInterval(
     ) {
       if (
         now - job.createdAt >
-        FILE_TTL
+          fileTtlMs ||
+        (
+          job.expiresAt &&
+          now > job.expiresAt
+        )
       ) {
-        await deleteFile(
+        await removeFile(
           job.filePath
         );
 
-        jobs.delete(jobId);
+        jobs.delete(
+          jobId
+        );
       }
     }
   },
   5 * 60 * 1000
 ).unref();
 
-
 /* =========================
-   START
+   START SERVER
 ========================= */
 
 async function start() {
   await fsp.mkdir(
-    TEMP_DIR,
+    tempDir,
     {
-      recursive: true
+      recursive: true,
     }
   );
 
   app.listen(
-    PORT,
+    port,
     "0.0.0.0",
     () => {
       console.log(
-        `Server aktif di port ${PORT}`
+        `Server aktif di port ${port}`
       );
     }
   );
 }
 
-start().catch(error => {
-  console.error(
-    "SERVER ERROR:",
-    error
-  );
-
-  process.exit(1);
-});
+start().catch(
+  (error) => {
+    console.error(error);
+    process.exit(1);
+  }
+);
