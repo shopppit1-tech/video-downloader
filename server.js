@@ -8,119 +8,668 @@ const path = require("node:path");
 require("dotenv").config();
 
 const app = express();
+
 const port = Number(process.env.PORT || 3000);
-const fileTtlMs = Number(process.env.FILE_TTL_MINUTES || 30) * 60 * 1000;
-const maxConcurrentDownloads = Number(process.env.MAX_CONCURRENT_DOWNLOADS || 2);
-const maxVideoDuration = Number(process.env.MAX_VIDEO_DURATION_SECONDS || 7200);
+const fileTtlMs =
+  Number(process.env.FILE_TTL_MINUTES || 30) * 60 * 1000;
+
+const maxConcurrentDownloads =
+  Number(process.env.MAX_CONCURRENT_DOWNLOADS || 2);
+
+const maxVideoDuration =
+  Number(process.env.MAX_VIDEO_DURATION_SECONDS || 7200);
+
 const tempDir = path.join(__dirname, "temp");
+
 const jobs = new Map();
 let activeDownloads = 0;
 
+/*
+ * Render berada di belakang reverse proxy.
+ * Ini harus diset SEBELUM express-rate-limit.
+ */
+app.set("trust proxy", 1);
+
 app.disable("x-powered-by");
+
 app.use(express.json({ limit: "10kb" }));
+
 app.use(express.static(path.join(__dirname, "public")));
-app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false }));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use("/api", apiLimiter);
+
+
+/* =========================
+   YOUTUBE
+========================= */
 
 function extractYouTubeId(input) {
   let url;
-  try { url = new URL(input); } catch { return null; }
-  const host = url.hostname.toLowerCase().replace(/^www\./, "");
-  if (host === "youtu.be") return /^[\w-]{11}$/.test(url.pathname.slice(1)) ? url.pathname.slice(1) : null;
-  if (!["youtube.com", "m.youtube.com", "music.youtube.com"].includes(host)) return null;
+
+  try {
+    url = new URL(input);
+  } catch {
+    return null;
+  }
+
+  const host = url.hostname
+    .toLowerCase()
+    .replace(/^www\./, "");
+
+  if (host === "youtu.be") {
+    const id = url.pathname.slice(1);
+
+    return /^[\w-]{11}$/.test(id) ? id : null;
+  }
+
+  if (
+    ![
+      "youtube.com",
+      "m.youtube.com",
+      "music.youtube.com",
+    ].includes(host)
+  ) {
+    return null;
+  }
+
   if (url.pathname === "/watch") {
     const id = url.searchParams.get("v");
-    return id && /^[\w-]{11}$/.test(id) ? id : null;
+
+    return id && /^[\w-]{11}$/.test(id)
+      ? id
+      : null;
   }
-  const match = url.pathname.match(/^\/(?:shorts|embed|live)\/([\w-]{11})(?:\/|$)/);
+
+  const match = url.pathname.match(
+    /^\/(?:shorts|embed|live)\/([\w-]{11})(?:\/|$)/
+  );
+
   return match ? match[1] : null;
 }
 
-function youtubeUrl(videoId) { return `https://www.youtube.com/watch?v=${videoId}`; }
+function youtubeUrl(videoId) {
+  return `https://www.youtube.com/watch?v=${videoId}`;
+}
+
+
+/* =========================
+   COMMAND RUNNER
+========================= */
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { windowsHide: true });
-    let stdout = ""; let stderr = "";
-    child.stdout?.on("data", (chunk) => { stdout += chunk.toString(); });
-    child.stderr?.on("data", (chunk) => { stderr += chunk.toString(); });
-    child.on("error", (error) => reject(new Error(`${command} tidak tersedia: ${error.message}`)));
-    child.on("close", (code) => code === 0 ? resolve({ stdout, stderr }) : reject(new Error(`${command} berhenti dengan kode ${code}: ${stderr.slice(-2000)}`)));
+    const child = spawn(command, args, {
+      windowsHide: true,
+      env: process.env,
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout?.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr?.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on("error", (error) => {
+      reject(
+        new Error(
+          `${command} tidak tersedia: ${error.message}`
+        )
+      );
+    });
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve({ stdout, stderr });
+        return;
+      }
+
+      reject(
+        new Error(
+          `${command} berhenti dengan kode ${code}: ${stderr.slice(-4000)}`
+        )
+      );
+    });
   });
 }
 
-function publicVideoInfo(info) {
-  const formats = Array.isArray(info.formats) ? info.formats : [];
-  const heights = [...new Set(formats.filter((f) => f.vcodec && f.vcodec !== "none" && Number.isFinite(f.height)).map((f) => f.height))].sort((a, b) => b - a).slice(0, 12);
-  return { id: info.id, title: info.title || "video", thumbnail: info.thumbnail || null, duration: Number(info.duration || 0), uploader: info.uploader || null, heights, hasAudio: formats.some((f) => f.acodec && f.acodec !== "none") };
+
+/* =========================
+   YT-DLP ARGUMENTS
+========================= */
+
+function ytDlpBaseArgs() {
+  return [
+    "--no-playlist",
+    "--no-warnings",
+
+    /*
+     * YouTube sekarang menggunakan JS challenge.
+     * Deno adalah runtime yang direkomendasikan yt-dlp.
+     */
+    "--js-runtimes",
+    "deno",
+
+    /*
+     * Izinkan yt-dlp mengambil komponen EJS
+     * bila diperlukan.
+     */
+    "--remote-components",
+    "ejs:npm",
+
+    /*
+     * Hindari cache lama di server.
+     */
+    "--no-cache-dir",
+  ];
 }
 
-async function removeFile(filePath) { if (filePath) await fsp.rm(filePath, { force: true }).catch((error) => console.error("Gagal menghapus file:", error.message)); }
+
+/* =========================
+   VIDEO INFO
+========================= */
+
+function publicVideoInfo(info) {
+  const formats = Array.isArray(info.formats)
+    ? info.formats
+    : [];
+
+  const heights = [
+    ...new Set(
+      formats
+        .filter(
+          (f) =>
+            f.vcodec &&
+            f.vcodec !== "none" &&
+            Number.isFinite(f.height)
+        )
+        .map((f) => f.height)
+    ),
+  ]
+    .sort((a, b) => b - a)
+    .slice(0, 12);
+
+  return {
+    id: info.id,
+    title: info.title || "video",
+    thumbnail: info.thumbnail || null,
+    duration: Number(info.duration || 0),
+    uploader: info.uploader || null,
+    heights,
+    hasAudio: formats.some(
+      (f) =>
+        f.acodec &&
+        f.acodec !== "none"
+    ),
+  };
+}
+
+
+/* =========================
+   FILE MANAGEMENT
+========================= */
+
+async function removeFile(filePath) {
+  if (!filePath) return;
+
+  await fsp
+    .rm(filePath, { force: true })
+    .catch((error) =>
+      console.error(
+        "Gagal menghapus file:",
+        error.message
+      )
+    );
+}
+
 function scheduleDeletion(jobId, filePath) {
-  const timer = setTimeout(async () => { await removeFile(filePath); jobs.delete(jobId); }, fileTtlMs);
+  const timer = setTimeout(async () => {
+    await removeFile(filePath);
+    jobs.delete(jobId);
+  }, fileTtlMs);
+
   timer.unref();
 }
 
+
+/* =========================
+   INSPECT VIDEO
+========================= */
+
 async function inspectVideo(videoId) {
-  const { stdout } = await run("yt-dlp", ["--dump-single-json", "--no-playlist", "--no-warnings", youtubeUrl(videoId)]);
+  const args = [
+    ...ytDlpBaseArgs(),
+
+    "--dump-single-json",
+
+    youtubeUrl(videoId),
+  ];
+
+  const { stdout } = await run("yt-dlp", args);
+
   return JSON.parse(stdout);
 }
 
-async function createDownload(jobId, videoId, requestedHeight) {
+
+/* =========================
+   DOWNLOAD
+========================= */
+
+async function createDownload(
+  jobId,
+  videoId,
+  requestedHeight
+) {
   const job = jobs.get(jobId);
+
   try {
-    const height = Math.min(Math.max(Number(requestedHeight) || 1080, 144), 2160);
-    const outputTemplate = path.join(tempDir, `${jobId}.%(ext)s`);
-    const format = [`bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`, `bv*[height<=${height}]+ba`, `b[height<=${height}]`, "b"].join("/");
-    await run("yt-dlp", ["--no-playlist", "--no-part", "--restrict-filenames", "--format", format, "--merge-output-format", "mp4", "--remux-video", "mp4", "--output", outputTemplate, youtubeUrl(videoId)]);
-    const candidates = await fsp.readdir(tempDir);
-    const generatedName = candidates.find((name) => name.startsWith(`${jobId}.`) && !name.endsWith(".part"));
-    if (!generatedName) throw new Error("File hasil pemrosesan tidak ditemukan.");
-    const filePath = path.join(tempDir, generatedName);
+    const height = Math.min(
+      Math.max(
+        Number(requestedHeight) || 1080,
+        144
+      ),
+      2160
+    );
+
+    await fsp.mkdir(tempDir, {
+      recursive: true,
+    });
+
+    const outputTemplate = path.join(
+      tempDir,
+      `${jobId}.%(ext)s`
+    );
+
+    const format = [
+      `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
+      `bv*[height<=${height}]+ba`,
+      `b[height<=${height}]`,
+      "b",
+    ].join("/");
+
+    const args = [
+      ...ytDlpBaseArgs(),
+
+      "--format",
+      format,
+
+      "--merge-output-format",
+      "mp4",
+
+      "--remux-video",
+      "mp4",
+
+      "--output",
+      outputTemplate,
+
+      youtubeUrl(videoId),
+    ];
+
+    await run("yt-dlp", args);
+
+    const candidates = await fsp.readdir(
+      tempDir
+    );
+
+    const generatedName = candidates.find(
+      (name) =>
+        name.startsWith(`${jobId}.`) &&
+        !name.endsWith(".part") &&
+        !name.endsWith(".ytdl")
+    );
+
+    if (!generatedName) {
+      throw new Error(
+        "File hasil pemrosesan tidak ditemukan."
+      );
+    }
+
+    const filePath = path.join(
+      tempDir,
+      generatedName
+    );
+
     const stats = await fsp.stat(filePath);
-    job.status = "ready"; job.filePath = filePath; job.size = stats.size; job.expiresAt = Date.now() + fileTtlMs;
-    scheduleDeletion(jobId, filePath);
+
+    job.status = "ready";
+    job.filePath = filePath;
+    job.size = stats.size;
+    job.expiresAt =
+      Date.now() + fileTtlMs;
+
+    scheduleDeletion(
+      jobId,
+      filePath
+    );
+
   } catch (error) {
-    job.status = "failed"; job.error = "Video tidak dapat diproses. Pastikan URL dapat diakses dan yt-dlp/FFmpeg terpasang."; console.error(error.message);
-  } finally { activeDownloads -= 1; }
+    job.status = "failed";
+
+    /*
+     * Simpan error sebenarnya untuk debugging.
+     * Jangan tampilkan seluruh stderr ke pengguna.
+     */
+    job.error =
+      "Video tidak dapat diproses.";
+
+    console.error(
+      `DOWNLOAD ERROR [${videoId}]:`,
+      error.message
+    );
+
+  } finally {
+    activeDownloads -= 1;
+  }
 }
 
+
+/* =========================
+   API INFO
+========================= */
+
 app.post("/api/info", async (req, res) => {
-  const videoId = extractYouTubeId(String(req.body?.url || "").trim());
-  if (!videoId) return res.status(400).json({ error: "URL YouTube tidak valid." });
+  const videoId = extractYouTubeId(
+    String(req.body?.url || "").trim()
+  );
+
+  if (!videoId) {
+    return res.status(400).json({
+      error:
+        "URL YouTube tidak valid.",
+    });
+  }
+
   try {
-    const info = await inspectVideo(videoId);
-    if (info.is_live) return res.status(400).json({ error: "Siaran langsung yang belum selesai tidak didukung." });
-    if (info.duration && info.duration > maxVideoDuration) return res.status(413).json({ error: `Durasi video melebihi batas ${Math.round(maxVideoDuration / 60)} menit.` });
-    return res.json(publicVideoInfo(info));
-  } catch (error) { console.error(error.message); return res.status(422).json({ error: "Informasi video tidak dapat diambil. Video mungkin privat, dibatasi, atau tidak tersedia." }); }
+    console.log(
+      `INFO REQUEST: ${videoId}`
+    );
+
+    const info =
+      await inspectVideo(videoId);
+
+    if (info.is_live) {
+      return res.status(400).json({
+        error:
+          "Siaran langsung yang belum selesai tidak didukung.",
+      });
+    }
+
+    if (
+      info.duration &&
+      info.duration > maxVideoDuration
+    ) {
+      return res.status(413).json({
+        error:
+          `Durasi video melebihi batas ${Math.round(
+            maxVideoDuration / 60
+          )} menit.`,
+      });
+    }
+
+    return res.json(
+      publicVideoInfo(info)
+    );
+
+  } catch (error) {
+    console.error(
+      `INFO ERROR [${videoId}]:`,
+      error.message
+    );
+
+    /*
+     * Berikan pesan yang lebih spesifik
+     * agar frontend tidak selalu mengatakan
+     * "video privat".
+     */
+    const message =
+      error.message || "";
+
+    if (
+      /sign in to confirm/i.test(message) ||
+      /not a bot/i.test(message) ||
+      /captcha/i.test(message)
+    ) {
+      return res.status(429).json({
+        error:
+          "YouTube menolak permintaan dari server. Coba lagi nanti atau gunakan video yang dapat diakses publik.",
+      });
+    }
+
+    if (
+      /private video/i.test(message) ||
+      /video unavailable/i.test(message)
+    ) {
+      return res.status(422).json({
+        error:
+          "Video privat atau tidak tersedia.",
+      });
+    }
+
+    return res.status(422).json({
+      error:
+        "Informasi video tidak dapat diambil.",
+    });
+  }
 });
+
+
+/* =========================
+   API DOWNLOAD
+========================= */
 
 app.post("/api/download", (req, res) => {
-  if (activeDownloads >= maxConcurrentDownloads) return res.status(429).json({ error: "Server sedang sibuk. Coba lagi setelah proses lain selesai." });
-  const videoId = String(req.body?.videoId || "");
-  const height = Number(req.body?.height || 1080);
-  if (!/^[\w-]{11}$/.test(videoId)) return res.status(400).json({ error: "ID video tidak valid." });
-  const jobId = crypto.randomUUID();
-  jobs.set(jobId, { status: "processing", videoId, createdAt: Date.now(), filePath: null });
-  activeDownloads += 1; void createDownload(jobId, videoId, height);
-  return res.status(202).json({ jobId });
+  if (
+    activeDownloads >=
+    maxConcurrentDownloads
+  ) {
+    return res.status(429).json({
+      error:
+        "Server sedang sibuk. Coba lagi setelah proses lain selesai.",
+    });
+  }
+
+  const videoId = String(
+    req.body?.videoId || ""
+  );
+
+  const height = Number(
+    req.body?.height || 1080
+  );
+
+  if (!/^[\w-]{11}$/.test(videoId)) {
+    return res.status(400).json({
+      error:
+        "ID video tidak valid.",
+    });
+  }
+
+  const jobId =
+    crypto.randomUUID();
+
+  jobs.set(jobId, {
+    status: "processing",
+    videoId,
+    createdAt: Date.now(),
+    filePath: null,
+  });
+
+  activeDownloads += 1;
+
+  void createDownload(
+    jobId,
+    videoId,
+    height
+  );
+
+  return res.status(202).json({
+    jobId,
+  });
 });
 
-app.get("/api/jobs/:jobId", (req, res) => {
-  const job = jobs.get(req.params.jobId);
-  if (!job) return res.status(404).json({ error: "Proses tidak ditemukan atau file sudah dihapus." });
-  return res.json({ status: job.status, size: job.size || null, expiresAt: job.expiresAt || null, error: job.error || null, downloadUrl: job.status === "ready" ? `/api/jobs/${req.params.jobId}/file` : null });
-});
 
-app.get("/api/jobs/:jobId/file", async (req, res) => {
-  const job = jobs.get(req.params.jobId);
-  if (!job || job.status !== "ready" || !job.filePath) return res.status(404).json({ error: "File belum siap atau sudah dihapus." });
-  if (!fs.existsSync(job.filePath)) { jobs.delete(req.params.jobId); return res.status(410).json({ error: "File sudah kedaluwarsa." }); }
-  res.setHeader("Cache-Control", "private, no-store");
-  res.download(job.filePath, "video.mp4", async (error) => { if (error && !res.headersSent) res.status(500).json({ error: "Pengiriman file gagal." }); await removeFile(job.filePath); jobs.delete(req.params.jobId); });
-});
+/* =========================
+   JOB STATUS
+========================= */
 
-setInterval(async () => { const now = Date.now(); for (const [jobId, job] of jobs) if (now - job.createdAt > fileTtlMs || (job.expiresAt && now > job.expiresAt)) { await removeFile(job.filePath); jobs.delete(jobId); } }, 5 * 60 * 1000).unref();
+app.get(
+  "/api/jobs/:jobId",
+  (req, res) => {
+    const job =
+      jobs.get(req.params.jobId);
 
-async function start() { await fsp.mkdir(tempDir, { recursive: true }); app.listen(port, "0.0.0.0", () => console.log(`Server aktif di http://localhost:${port}`)); }
-start().catch((error) => { console.error(error); process.exit(1); });
+    if (!job) {
+      return res.status(404).json({
+        error:
+          "Proses tidak ditemukan atau file sudah dihapus.",
+      });
+    }
+
+    return res.json({
+      status: job.status,
+      size: job.size || null,
+      expiresAt:
+        job.expiresAt || null,
+      error:
+        job.error || null,
+      downloadUrl:
+        job.status === "ready"
+          ? `/api/jobs/${req.params.jobId}/file`
+          : null,
+    });
+  }
+);
+
+
+/* =========================
+   FILE DOWNLOAD
+========================= */
+
+app.get(
+  "/api/jobs/:jobId/file",
+  async (req, res) => {
+    const job =
+      jobs.get(req.params.jobId);
+
+    if (
+      !job ||
+      job.status !== "ready" ||
+      !job.filePath
+    ) {
+      return res.status(404).json({
+        error:
+          "File belum siap atau sudah dihapus.",
+      });
+    }
+
+    if (
+      !fs.existsSync(job.filePath)
+    ) {
+      jobs.delete(
+        req.params.jobId
+      );
+
+      return res.status(410).json({
+        error:
+          "File sudah kedaluwarsa.",
+      });
+    }
+
+    res.setHeader(
+      "Cache-Control",
+      "private, no-store"
+    );
+
+    res.download(
+      job.filePath,
+      "video.mp4",
+      async (error) => {
+        if (
+          error &&
+          !res.headersSent
+        ) {
+          res.status(500).json({
+            error:
+              "Pengiriman file gagal.",
+          });
+        }
+
+        await removeFile(
+          job.filePath
+        );
+
+        jobs.delete(
+          req.params.jobId
+        );
+      }
+    );
+  }
+);
+
+
+/* =========================
+   CLEANUP
+========================= */
+
+setInterval(
+  async () => {
+    const now = Date.now();
+
+    for (
+      const [jobId, job] of jobs
+    ) {
+      if (
+        now - job.createdAt >
+          fileTtlMs ||
+        (job.expiresAt &&
+          now > job.expiresAt)
+      ) {
+        await removeFile(
+          job.filePath
+        );
+
+        jobs.delete(jobId);
+      }
+    }
+  },
+  5 * 60 * 1000
+).unref();
+
+
+/* =========================
+   START
+========================= */
+
+async function start() {
+  await fsp.mkdir(
+    tempDir,
+    { recursive: true }
+  );
+
+  app.listen(
+    port,
+    "0.0.0.0",
+    () => {
+      console.log(
+        `Server aktif di port ${port}`
+      );
+    }
+  );
+}
+
+start().catch(
+  (error) => {
+    console.error(error);
+    process.exit(1);
+  }
+);
