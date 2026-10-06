@@ -604,3 +604,1141 @@
   </script>
 </body>
 </html>
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1"
+  >
+
+  <title>Video Fetch — Pengunduh Video</title>
+
+  <meta
+    name="description"
+    content="Video Fetch adalah pengunduh video MP4 yang cepat dan mudah digunakan."
+  >
+
+  <meta name="theme-color" content="#ffffff">
+
+  <link rel="manifest" href="/manifest.json">
+
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="192x192"
+    href="/icon-192.png"
+  >
+
+  <link
+    rel="apple-touch-icon"
+    href="/icon-192.png"
+  >
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: #f4f7fb;
+      color: #111827;
+      font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 900px;
+      margin: auto;
+      padding: 28px 18px 50px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 12px 18px;
+      border-radius: 30px;
+      background: #e8f0ff;
+      color: #1769e0;
+      font-weight: 800;
+      font-size: 15px;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(42px, 9vw, 76px);
+      line-height: .95;
+      letter-spacing: -4px;
+      font-weight: 900;
+      color: #111827;
+    }
+
+    .intro {
+      margin-top: 28px;
+      color: #687386;
+      font-size: 20px;
+      line-height: 1.8;
+    }
+
+    .card {
+      margin-top: 30px;
+      background: white;
+      border: 1px solid #e0e5ed;
+      border-radius: 34px;
+      padding: 34px;
+      box-shadow:
+        0 15px 45px rgba(20, 40, 80, .08);
+    }
+
+    input,
+    select {
+      width: 100%;
+      height: 64px;
+      border: 2px solid #e1e6ed;
+      border-radius: 18px;
+      background: white;
+      padding: 0 20px;
+      font-size: 17px;
+      outline: none;
+      color: #111827;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: #1769e0;
+    }
+
+    button {
+      width: 100%;
+      height: 64px;
+      margin-top: 14px;
+      border: 0;
+      border-radius: 18px;
+      background: #1769e0;
+      color: white;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .download-btn {
+      background: #111827;
+    }
+
+    .status {
+      display: none;
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 18px;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    .status.error {
+      display: block;
+      background: #fff0f0;
+      color: #b42318;
+    }
+
+    .status.success {
+      display: block;
+      background: #ecfdf3;
+      color: #067647;
+    }
+
+    .status.loading {
+      display: block;
+      background: #eef5ff;
+      color: #175cd3;
+    }
+
+    .video-box {
+      display: none;
+      margin-top: 25px;
+      overflow: hidden;
+      border-radius: 24px;
+      background: #000;
+    }
+
+    .video-box iframe {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 0;
+    }
+
+    .video-info {
+      display: none;
+      margin-top: 22px;
+    }
+
+    .thumbnail {
+      width: 100%;
+      display: block;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+
+    .title {
+      margin: 0 0 10px;
+      font-size: 25px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
+    .meta {
+      color: #687386;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .quality {
+      margin-top: 18px;
+    }
+
+    .quality label {
+      display: block;
+      margin-bottom: 9px;
+      font-weight: 700;
+    }
+
+    .small {
+      margin-top: 24px;
+      color: #788397;
+      font-size: 14px;
+      line-height: 1.7;
+      text-align: center;
+    }
+
+    footer {
+      margin-top: 35px;
+      color: #788397;
+      text-align: center;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      .page {
+        padding: 22px 16px 40px;
+      }
+
+      .card {
+        padding: 20px;
+        border-radius: 28px;
+      }
+
+      h1 {
+        font-size: 46px;
+        letter-spacing: -3px;
+      }
+
+      .intro {
+        font-size: 18px;
+      }
+
+      input,
+      select,
+      button {
+        height: 60px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="page">
+
+  <div class="badge">
+    MP4 · CEPAT · SEDERHANA
+  </div>
+
+  <h1>
+    Video favoritmu,<br>
+    siap ditonton offline.
+  </h1>
+
+  <div class="intro">
+    Tempel URL YouTube, pilih kualitas,
+    dan dapatkan file MP4. Gunakan hanya
+    untuk konten yang Anda miliki atau
+    diizinkan untuk diunduh.
+  </div>
+
+  <div class="card">
+
+    <input
+      id="url"
+      type="url"
+      inputmode="url"
+      autocomplete="off"
+      placeholder="https://youtube.com/watch?v=..."
+    >
+
+    <button
+      id="checkBtn"
+      type="button"
+    >
+      Periksa video
+    </button>
+
+    <div
+      id="status"
+      class="status"
+    ></div>
+
+    <!-- VIDEO YOUTUBE -->
+    <div
+      id="videoBox"
+      class="video-box"
+    >
+      <iframe
+        id="videoFrame"
+        title="Video YouTube"
+        allow="
+          accelerometer;
+          autoplay;
+          clipboard-write;
+          encrypted-media;
+          gyroscope;
+          picture-in-picture;
+          web-share
+        "
+        allowfullscreen
+      ></iframe>
+    </div>
+
+    <!-- INFORMASI VIDEO -->
+    <div
+      id="videoInfo"
+      class="video-info"
+    >
+
+      <img
+        id="thumbnail"
+        class="thumbnail"
+        alt="Thumbnail video"
+      >
+
+      <h2
+        id="videoTitle"
+        class="title"
+      ></h2>
+
+      <div
+        id="videoMeta"
+        class="meta"
+      ></div>
+
+      <div class="quality">
+
+        <label for="quality">
+          Pilih kualitas
+        </label>
+
+        <select id="quality"></select>
+
+      </div>
+
+      <button
+        id="downloadBtn"
+        class="download-btn"
+        type="button"
+      >
+        Unduh MP4
+      </button>
+
+    </div>
+
+    <div class="small">
+      Mendukung video, Shorts, dan tautan youtu.be.
+      Siaran langsung yang sedang berlangsung
+      tidak didukung.
+    </div>
+
+  </div>
+
+  <footer>
+    File sementara dapat dihapus setelah diunduh
+    atau kedaluwarsa.<br>
+    Pastikan penggunaan mematuhi ketentuan layanan
+    sumber video.
+  </footer>
+
+</div>
+
+<script>
+"use strict";
+
+/* =========================
+   ELEMENTS
+========================= */
+
+const urlInput =
+  document.getElementById("url");
+
+const checkBtn =
+  document.getElementById("checkBtn");
+
+const downloadBtn =
+  document.getElementById("downloadBtn");
+
+const quality =
+  document.getElementById("quality");
+
+const statusBox =
+  document.getElementById("status");
+
+const videoBox =
+  document.getElementById("videoBox");
+
+const videoFrame =
+  document.getElementById("videoFrame");
+
+const videoInfo =
+  document.getElementById("videoInfo");
+
+const thumbnail =
+  document.getElementById("thumbnail");
+
+const videoTitle =
+  document.getElementById("videoTitle");
+
+const videoMeta =
+  document.getElementById("videoMeta");
+
+/* =========================
+   STATE
+========================= */
+
+let currentVideoId = null;
+let currentVideoUrl = null;
+
+/* =========================
+   STATUS
+========================= */
+
+function showStatus(
+  message,
+  type = "loading"
+) {
+  statusBox.className =
+    `status ${type}`;
+
+  statusBox.textContent =
+    message;
+}
+
+function hideStatus() {
+  statusBox.className =
+    "status";
+
+  statusBox.textContent =
+    "";
+}
+
+/* =========================
+   EXTRACT YOUTUBE ID
+========================= */
+
+function extractYouTubeId(input) {
+
+  try {
+
+    const url =
+      new URL(input);
+
+    const host =
+      url.hostname
+        .toLowerCase()
+        .replace(/^www\./, "");
+
+    if (host === "youtu.be") {
+
+      const id =
+        url.pathname
+          .split("/")
+          .filter(Boolean)[0];
+
+      return /^[\w-]{11}$/.test(id)
+        ? id
+        : null;
+    }
+
+    if (
+      ![
+        "youtube.com",
+        "m.youtube.com",
+        "music.youtube.com"
+      ].includes(host)
+    ) {
+      return null;
+    }
+
+    if (
+      url.pathname === "/watch"
+    ) {
+
+      const id =
+        url.searchParams.get("v");
+
+      return id &&
+        /^[\w-]{11}$/.test(id)
+        ? id
+        : null;
+    }
+
+    const match =
+      url.pathname.match(
+        /^\/(?:shorts|embed|live)\/([\w-]{11})(?:\/|$)/
+      );
+
+    return match
+      ? match[1]
+      : null;
+
+  } catch {
+
+    return null;
+
+  }
+}
+
+/* =========================
+   FORMAT DURATION
+========================= */
+
+function formatDuration(seconds) {
+
+  seconds =
+    Number(seconds || 0);
+
+  if (!seconds) {
+    return "";
+  }
+
+  const h =
+    Math.floor(seconds / 3600);
+
+  const m =
+    Math.floor(
+      (seconds % 3600) / 60
+    );
+
+  const s =
+    Math.floor(seconds % 60);
+
+  if (h > 0) {
+    return `${h} jam ${m} menit ${s} detik`;
+  }
+
+  if (m > 0) {
+    return `${m} menit ${s} detik`;
+  }
+
+  return `${s} detik`;
+}
+
+/* =========================
+   RESET
+========================= */
+
+function resetVideo() {
+
+  currentVideoId = null;
+  currentVideoUrl = null;
+
+  videoInfo.style.display =
+    "none";
+
+  videoBox.style.display =
+    "none";
+
+  videoFrame.src =
+    "";
+
+  thumbnail.src =
+    "";
+
+  videoTitle.textContent =
+    "";
+
+  videoMeta.textContent =
+    "";
+
+  quality.innerHTML =
+    "";
+
+  hideStatus();
+}
+
+/* =========================
+   SHOW VIDEO
+========================= */
+
+function showVideo(info) {
+
+  currentVideoId =
+    info.id;
+
+  currentVideoUrl =
+    urlInput.value.trim();
+
+  /*
+   * YouTube player
+   */
+  videoFrame.src =
+    `https://www.youtube.com/embed/${encodeURIComponent(
+      info.id
+    )}`;
+
+  videoBox.style.display =
+    "block";
+
+  /*
+   * Thumbnail
+   */
+  if (info.thumbnail) {
+
+    thumbnail.src =
+      info.thumbnail;
+
+    thumbnail.style.display =
+      "block";
+
+  } else {
+
+    thumbnail.style.display =
+      "none";
+
+  }
+
+  /*
+   * Title
+   */
+  videoTitle.textContent =
+    info.title ||
+    "Video YouTube";
+
+  /*
+   * Meta
+   */
+  const parts = [];
+
+  if (info.uploader) {
+    parts.push(
+      `Channel: ${info.uploader}`
+    );
+  }
+
+  if (info.duration) {
+    parts.push(
+      `Durasi: ${formatDuration(
+        info.duration
+      )}`
+    );
+  }
+
+  videoMeta.textContent =
+    parts.join(" · ");
+
+  /*
+   * Quality
+   */
+  quality.innerHTML =
+    "";
+
+  const heights =
+    Array.isArray(info.heights)
+      ? info.heights
+      : [];
+
+  const uniqueHeights =
+    [...new Set(
+      heights
+        .map(Number)
+        .filter(
+          Number.isFinite
+        )
+    )]
+    .sort(
+      (a, b) => b - a
+    );
+
+  if (
+    uniqueHeights.length === 0
+  ) {
+
+    uniqueHeights.push(
+      360,
+      480,
+      720
+    );
+
+  }
+
+  uniqueHeights.forEach(
+    height => {
+
+      const option =
+        document.createElement(
+          "option"
+        );
+
+      option.value =
+        String(height);
+
+      option.textContent =
+        `${height}p`;
+
+      quality.appendChild(
+        option
+      );
+
+    }
+  );
+
+  /*
+   * Pilih 480p jika tersedia
+   */
+  const has480 =
+    uniqueHeights.includes(480);
+
+  if (has480) {
+    quality.value = "480";
+  }
+
+  videoInfo.style.display =
+    "block";
+
+  /*
+   * Scroll ke video
+   */
+  setTimeout(() => {
+
+    videoBox.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+
+  }, 100);
+}
+
+/* =========================
+   CHECK VIDEO
+========================= */
+
+checkBtn.addEventListener(
+  "click",
+  async () => {
+
+    const url =
+      urlInput.value.trim();
+
+    if (!url) {
+
+      showStatus(
+        "Masukkan URL YouTube terlebih dahulu.",
+        "error"
+      );
+
+      return;
+    }
+
+    const videoId =
+      extractYouTubeId(url);
+
+    if (!videoId) {
+
+      showStatus(
+        "URL YouTube tidak valid.",
+        "error"
+      );
+
+      return;
+    }
+
+    resetVideo();
+
+    checkBtn.disabled =
+      true;
+
+    checkBtn.textContent =
+      "Memeriksa...";
+
+    showStatus(
+      "Sedang mengambil informasi video...",
+      "loading"
+    );
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/info",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body:
+              JSON.stringify({
+                url
+              })
+          }
+        );
+
+      const data =
+        await response.json()
+          .catch(() => ({}));
+
+      if (!response.ok) {
+
+        throw new Error(
+          data.error ||
+          "Video tidak dapat diperiksa."
+        );
+
+      }
+
+      /*
+       * Pastikan ID dari server valid.
+       * Kalau server tidak mengirim ID,
+       * gunakan ID hasil ekstraksi URL.
+       */
+      if (
+        !data.id ||
+        !/^[\w-]{11}$/.test(
+          data.id
+        )
+      ) {
+
+        data.id =
+          videoId;
+
+      }
+
+      showVideo(data);
+
+      showStatus(
+        "Video berhasil ditemukan.",
+        "success"
+      );
+
+    } catch (error) {
+
+      showStatus(
+        error.message ||
+        "Gagal memeriksa video.",
+        "error"
+      );
+
+    } finally {
+
+      checkBtn.disabled =
+        false;
+
+      checkBtn.textContent =
+        "Periksa video";
+
+    }
+
+  }
+);
+
+/* =========================
+   DOWNLOAD
+========================= */
+
+downloadBtn.addEventListener(
+  "click",
+  async () => {
+
+    if (!currentVideoId) {
+
+      showStatus(
+        "Video belum diperiksa.",
+        "error"
+      );
+
+      return;
+    }
+
+    const height =
+      Number(
+        quality.value || 480
+      );
+
+    downloadBtn.disabled =
+      true;
+
+    downloadBtn.textContent =
+      "Menyiapkan MP4...";
+
+    showStatus(
+      `Menyiapkan video ${height}p...`,
+      "loading"
+    );
+
+    try {
+
+      /*
+       * Kirim videoId DAN URL.
+       * Backend versi baru bisa menerima keduanya.
+       */
+      const response =
+        await fetch(
+          "/api/download",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body:
+              JSON.stringify({
+                videoId:
+                  currentVideoId,
+
+                url:
+                  currentVideoUrl,
+
+                height
+              })
+          }
+        );
+
+      const data =
+        await response.json()
+          .catch(() => ({}));
+
+      if (!response.ok) {
+
+        throw new Error(
+          data.error ||
+          "Download gagal."
+        );
+
+      }
+
+      if (!data.jobId) {
+
+        throw new Error(
+          "Server tidak memberikan ID proses."
+        );
+
+      }
+
+      showStatus(
+        "Video sedang diproses. Jangan tutup halaman...",
+        "loading"
+      );
+
+      await waitForDownload(
+        data.jobId
+      );
+
+    } catch (error) {
+
+      showStatus(
+        error.message ||
+        "Download gagal.",
+        "error"
+      );
+
+    } finally {
+
+      downloadBtn.disabled =
+        false;
+
+      downloadBtn.textContent =
+        "Unduh MP4";
+
+    }
+
+  }
+);
+
+/* =========================
+   POLLING DOWNLOAD
+========================= */
+
+async function waitForDownload(
+  jobId
+) {
+
+  const maxAttempts =
+    180;
+
+  for (
+    let attempt = 0;
+    attempt < maxAttempts;
+    attempt++
+  ) {
+
+    const response =
+      await fetch(
+        `/api/jobs/${encodeURIComponent(
+          jobId
+        )}`,
+        {
+          cache: "no-store"
+        }
+      );
+
+    const data =
+      await response.json()
+        .catch(() => ({}));
+
+    if (!response.ok) {
+
+      throw new Error(
+        data.error ||
+        "Status download tidak dapat diperiksa."
+      );
+
+    }
+
+    if (
+      data.status ===
+      "ready"
+    ) {
+
+      if (!data.downloadUrl) {
+
+        throw new Error(
+          "File selesai tetapi URL download tidak tersedia."
+        );
+
+      }
+
+      showStatus(
+        "Video sudah siap. Download dimulai...",
+        "success"
+      );
+
+      window.location.href =
+        data.downloadUrl;
+
+      return;
+    }
+
+    if (
+      data.status ===
+      "failed"
+    ) {
+
+      throw new Error(
+        data.error ||
+        "Server gagal memproses video."
+      );
+
+    }
+
+    /*
+     * Update pesan setiap beberapa detik
+     */
+    if (
+      attempt % 3 === 0
+    ) {
+
+      showStatus(
+        `Video sedang diproses... ${Math.min(
+          Math.round(
+            attempt * 2
+          ),
+          100
+        )}%`,
+        "loading"
+      );
+
+    }
+
+    await new Promise(
+      resolve =>
+        setTimeout(
+          resolve,
+          2000
+        )
+    );
+
+  }
+
+  throw new Error(
+    "Proses terlalu lama. Silakan coba lagi."
+  );
+}
+
+/* =========================
+   ENTER KEY
+========================= */
+
+urlInput.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.key ===
+      "Enter"
+    ) {
+
+      event.preventDefault();
+
+      checkBtn.click();
+
+    }
+
+  }
+);
+
+/* =========================
+   PWA
+========================= */
+
+if (
+  "serviceWorker" in navigator
+) {
+
+  window.addEventListener(
+    "load",
+    () => {
+
+      navigator.serviceWorker
+        .register("/sw.js")
+        .catch(
+          error =>
+            console.error(
+              "Service Worker:",
+              error
+            )
+        );
+
+    }
+  );
+
+}
+</script>
+
+</body>
+</html>
