@@ -15,7 +15,7 @@
     content="Video Fetch adalah pengunduh video MP4 yang cepat dan mudah digunakan."
   >
 
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#071329">
 
   <link rel="manifest" href="/manifest.json">
 
@@ -31,7 +31,6 @@
     href="/icon-192.png"
   >
 
-
   <style>
 
     * {
@@ -44,189 +43,463 @@
 
     body {
       margin: 0;
-      background: #f4f7fb;
-      color: #111827;
-      font-family: Arial, Helvetica, sans-serif;
+      color: #f8fbff;
+      font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+      background:
+        radial-gradient(
+          circle at 15% 10%,
+          rgba(39, 100, 255, .28),
+          transparent 30%
+        ),
+        radial-gradient(
+          circle at 85% 20%,
+          rgba(115, 55, 255, .22),
+          transparent 30%
+        ),
+        linear-gradient(
+          145deg,
+          #030817 0%,
+          #071329 48%,
+          #04091a 100%
+        );
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      width: 420px;
+      height: 420px;
+      left: -240px;
+      top: 300px;
+      border-radius: 50%;
+      background: rgba(21, 94, 255, .16);
+      filter: blur(80px);
+      pointer-events: none;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      width: 380px;
+      height: 380px;
+      right: -230px;
+      bottom: 100px;
+      border-radius: 50%;
+      background: rgba(104, 45, 255, .15);
+      filter: blur(90px);
+      pointer-events: none;
     }
 
     .page {
       width: 100%;
-      max-width: 900px;
+      max-width: 1080px;
       margin: auto;
-      padding: 16px 18px 50px;
+      padding: 18px 18px 60px;
+      position: relative;
+      z-index: 1;
     }
 
 
     /* =====================================================
-       IKLAN ATAS
+       IKLAN
     ====================================================== */
 
-    .top-ad {
+    .ad-box {
       width: 100%;
-      min-height: 90px;
-      margin: 0 auto 28px;
-      border: 1px dashed #b9c3d0;
-      border-radius: 12px;
-      background: #ffffff;
+      min-height: 92px;
+      border: 1px solid rgba(160, 190, 255, .25);
+      border-radius: 16px;
+      background:
+        linear-gradient(
+          100deg,
+          rgba(255,255,255,.97),
+          rgba(238,245,255,.97)
+        );
+      box-shadow:
+        0 15px 45px rgba(0,0,0,.28);
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
+    }
+
+    .top-ad {
+      margin-bottom: 42px;
+    }
+
+    .bottom-ad {
+      margin-top: 28px;
     }
 
     .test-ad {
       width: 100%;
-      min-height: 90px;
-      padding: 12px 20px;
+      min-height: 92px;
+      padding: 12px 22px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 15px;
+      color: #172033;
     }
 
-    .test-ad-left {
+    .ad-left {
       min-width: 0;
     }
 
-    .test-ad-label {
-      color: #8a94a6;
+    .ad-label {
+      display: inline-block;
+      padding: 5px 9px;
+      margin-bottom: 5px;
+      border-radius: 7px;
+      background: #edf2f8;
+      color: #64748b;
       font-size: 10px;
-      font-weight: 700;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: .5px;
+      font-weight: 800;
     }
 
-    .test-ad-brand {
-      font-size: 25px;
-      font-weight: 500;
-      color: #4285f4;
+    .ad-brand {
+      font-size: 24px;
       line-height: 1.1;
+      white-space: nowrap;
     }
 
-    .test-ad-brand span:nth-child(2) {
-      color: #ea4335;
+    .ad-google {
+      color: #4285f4;
     }
 
-    .test-ad-brand span:nth-child(3) {
-      color: #fbbc05;
-    }
-
-    .test-ad-brand span:nth-child(4) {
-      color: #34a853;
-    }
-
-    .test-ad-sub {
+    .ad-sub {
       color: #667085;
-      font-size: 13px;
-      margin-top: 5px;
+      font-size: 12px;
+      margin-top: 4px;
     }
 
-    .test-ad-button {
+    .ad-button {
       flex-shrink: 0;
       background: #1769e0;
-      color: #fff;
-      border-radius: 10px;
-      padding: 12px 18px;
-      font-size: 13px;
-      font-weight: 800;
-      white-space: nowrap;
+      color: white;
+      padding: 13px 19px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: 0 7px 20px rgba(23,105,224,.25);
     }
 
 
     /* =====================================================
-       HEADER
+       BRAND
     ====================================================== */
 
-    .badge {
-      display: inline-block;
-      padding: 12px 18px;
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .brand-icon {
+      width: 76px;
+      height: 76px;
+      flex-shrink: 0;
+      border-radius: 23px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 35px;
+      background:
+        linear-gradient(
+          145deg,
+          #713cff,
+          #087cff
+        );
+      box-shadow:
+        0 0 30px rgba(52,105,255,.55),
+        inset 0 1px 1px rgba(255,255,255,.4);
+      position: relative;
+    }
+
+    .brand-icon::after {
+      content: "↓";
+      position: absolute;
+      right: -9px;
+      bottom: -8px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 21px;
+      font-weight: 900;
+      background: #087cff;
+      border: 3px solid #071329;
+      box-shadow: 0 0 20px rgba(0,140,255,.65);
+    }
+
+    .brand-name {
+      margin: 0;
+      font-size: 38px;
+      font-weight: 900;
+      letter-spacing: -1.8px;
+    }
+
+    .brand-name span {
+      background:
+        linear-gradient(
+          90deg,
+          #00d9ff,
+          #386bff,
+          #9c5cff
+        );
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .brand-subtitle {
+      margin-top: 5px;
+      color: #a5b6d4;
+      font-size: 18px;
+    }
+
+
+    /* =====================================================
+       TAGS
+    ====================================================== */
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 12px 0 28px;
+    }
+
+    .tag {
+      padding: 10px 17px;
       border-radius: 30px;
-      background: #e8f0ff;
-      color: #1769e0;
+      color: #e8f0ff;
+      background:
+        rgba(83,111,169,.22);
+      border: 1px solid rgba(137,165,224,.15);
       font-weight: 800;
-      font-size: 15px;
-      margin-bottom: 22px;
+      font-size: 14px;
+      backdrop-filter: blur(12px);
+    }
+
+
+    /* =====================================================
+       HERO
+    ====================================================== */
+
+    .hero {
+      position: relative;
+      padding: 4px 0 30px;
+      min-height: 260px;
+    }
+
+    .hero-content {
+      max-width: 670px;
+      position: relative;
+      z-index: 2;
     }
 
     h1 {
       margin: 0;
-      font-size: clamp(42px, 9vw, 76px);
-      line-height: .95;
+      font-size: clamp(45px, 7vw, 78px);
+      line-height: .96;
       letter-spacing: -4px;
-      font-weight: 900;
-      color: #111827;
+      font-weight: 950;
+    }
+
+    h1 .gradient {
+      background:
+        linear-gradient(
+          90deg,
+          #00d9ff,
+          #278cff,
+          #9b51ff
+        );
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
     .intro {
-      margin-top: 28px;
-      color: #687386;
-      font-size: 20px;
-      line-height: 1.8;
+      margin-top: 25px;
+      color: #a7b7d0;
+      font-size: 19px;
+      line-height: 1.7;
+      max-width: 700px;
+    }
+
+    .floating-badge {
+      position: absolute;
+      border-radius: 16px;
+      padding: 13px 19px;
+      font-size: 22px;
+      font-weight: 900;
+      transform: rotate(-7deg);
+      box-shadow:
+        0 15px 40px rgba(0,0,0,.3);
+      z-index: 1;
+    }
+
+    .badge-mp4 {
+      right: 180px;
+      top: 15px;
+      background:
+        linear-gradient(
+          135deg,
+          #087cff,
+          #633cff
+        );
+      border: 1px solid #28bfff;
+    }
+
+    .badge-4k {
+      right: 45px;
+      top: 100px;
+      transform: rotate(7deg);
+      background:
+        linear-gradient(
+          135deg,
+          #6c37ff,
+          #a341ff
+        );
+      border: 1px solid #b279ff;
+    }
+
+    .badge-hd {
+      right: 105px;
+      top: 175px;
+      transform: rotate(8deg);
+      background:
+        rgba(30,71,125,.7);
+      border: 1px solid rgba(90,160,255,.5);
+      color: #8ed8ff;
     }
 
 
     /* =====================================================
-       CARD
+       MAIN CARD
     ====================================================== */
 
-    .card {
-      margin-top: 30px;
-      background: white;
-      border: 1px solid #e0e5ed;
-      border-radius: 34px;
-      padding: 34px;
-      box-shadow: 0 15px 45px rgba(20, 40, 80, .08);
+    .main-card {
+      margin-top: 5px;
+      padding: 24px;
+      border-radius: 28px;
+      background:
+        linear-gradient(
+          145deg,
+          rgba(17,35,70,.92),
+          rgba(7,18,40,.96)
+        );
+      border: 1px solid rgba(109,147,214,.2);
+      box-shadow:
+        0 30px 90px rgba(0,0,0,.4),
+        inset 0 1px rgba(255,255,255,.05);
+      backdrop-filter: blur(20px);
     }
 
 
     /* =====================================================
-       INPUT
+       INPUT AREA
     ====================================================== */
 
-    input,
-    select {
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 285px;
+      gap: 14px;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #91a7ca;
+      font-size: 24px;
+      pointer-events: none;
+    }
+
+    input {
       width: 100%;
-      height: 64px;
-      border: 2px solid #e1e6ed;
+      height: 70px;
+      border: 1px solid rgba(125,157,211,.35);
       border-radius: 18px;
-      background: white;
-      padding: 0 20px;
+      background:
+        rgba(19,39,76,.8);
+      color: white;
+      padding: 0 52px;
       font-size: 17px;
       outline: none;
-      color: #111827;
+      box-shadow:
+        inset 0 1px rgba(255,255,255,.04);
     }
 
-    input:focus,
-    select:focus {
-      border-color: #1769e0;
+    input::placeholder {
+      color: #8193b3;
     }
 
+    input:focus {
+      border-color: #218dff;
+      box-shadow:
+        0 0 0 3px rgba(33,141,255,.12),
+        0 0 30px rgba(33,141,255,.1);
+    }
 
-    /* =====================================================
-       BUTTON
-    ====================================================== */
+    .clear-icon {
+      position: absolute;
+      right: 19px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #7084a7;
+      font-size: 24px;
+      cursor: pointer;
+      display: none;
+    }
 
-    button {
-      width: 100%;
-      height: 64px;
-      margin-top: 14px;
+    #checkBtn {
+      margin: 0;
+      height: 70px;
       border: 0;
       border-radius: 18px;
-      background: #1769e0;
+      background:
+        linear-gradient(
+          100deg,
+          #04b9ff,
+          #1769ff,
+          #503cff
+        );
       color: white;
       font-size: 18px;
-      font-weight: 800;
+      font-weight: 900;
       cursor: pointer;
+      box-shadow:
+        0 12px 35px rgba(22,112,255,.3);
+      transition:
+        transform .2s,
+        box-shadow .2s;
     }
 
-    button:disabled {
+    #checkBtn:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 16px 42px rgba(22,112,255,.45);
+    }
+
+    #checkBtn:disabled {
       opacity: .55;
       cursor: not-allowed;
-    }
-
-    .download-btn {
-      background: #111827;
+      transform: none;
     }
 
 
@@ -236,30 +509,33 @@
 
     .status {
       display: none;
-      margin-top: 18px;
-      padding: 18px;
-      border-radius: 18px;
-      line-height: 1.6;
-      font-size: 16px;
+      margin-top: 17px;
+      padding: 16px 18px;
+      border-radius: 15px;
+      line-height: 1.5;
+      font-size: 14px;
       white-space: pre-wrap;
     }
 
     .status.error {
       display: block;
-      background: #fff0f0;
-      color: #b42318;
+      background: rgba(220,38,38,.12);
+      border: 1px solid rgba(248,113,113,.2);
+      color: #ff9c9c;
     }
 
     .status.success {
       display: block;
-      background: #ecfdf3;
-      color: #067647;
+      background: rgba(16,185,129,.1);
+      border: 1px solid rgba(52,211,153,.18);
+      color: #72f0bd;
     }
 
     .status.loading {
       display: block;
-      background: #eef5ff;
-      color: #175cd3;
+      background: rgba(37,99,235,.1);
+      border: 1px solid rgba(96,165,250,.18);
+      color: #7db9ff;
     }
 
 
@@ -269,15 +545,17 @@
 
     .thumbnail-box {
       display: none;
-      margin-top: 25px;
+      margin-top: 22px;
       overflow: hidden;
-      border-radius: 24px;
-      background: #000;
+      border-radius: 23px;
+      background: #020617;
+      border: 1px solid rgba(100,145,220,.18);
+      box-shadow:
+        0 20px 50px rgba(0,0,0,.25);
     }
 
     .thumbnail {
       width: 100%;
-      height: auto;
       aspect-ratio: 16 / 9;
       object-fit: cover;
       display: block;
@@ -290,20 +568,22 @@
 
     .video-info {
       display: none;
-      margin-top: 22px;
+      margin-top: 20px;
     }
 
     .title {
-      margin: 0 0 10px;
-      font-size: 25px;
-      line-height: 1.35;
-      font-weight: 800;
+      margin: 0 0 9px;
+      font-size: 26px;
+      line-height: 1.3;
+      font-weight: 900;
+      color: #f8fbff;
     }
 
     .meta {
-      color: #687386;
-      margin-bottom: 20px;
+      color: #93a7c8;
+      margin-bottom: 22px;
       line-height: 1.6;
+      font-size: 14px;
     }
 
 
@@ -311,45 +591,155 @@
        QUALITY
     ====================================================== */
 
+    .quality-title {
+      color: #f5f8ff;
+      font-size: 17px;
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+
     .quality {
-      margin-top: 18px;
+      margin-top: 12px;
     }
 
     .quality label {
-      display: block;
-      margin-bottom: 9px;
-      font-weight: 700;
+      display: none;
+    }
+
+    select {
+      width: 100%;
+      height: 60px;
+      border: 1px solid rgba(125,157,211,.3);
+      border-radius: 17px;
+      background: #102443;
+      color: white;
+      padding: 0 18px;
+      font-size: 16px;
+      font-weight: 800;
+      outline: none;
+    }
+
+    select:focus {
+      border-color: #168cff;
     }
 
 
     /* =====================================================
-       IKLAN BAWAH
+       DOWNLOAD
     ====================================================== */
 
-    .bottom-ad {
+    .download-btn {
       width: 100%;
-      min-height: 100px;
-      margin-top: 28px;
-      border: 1px dashed #b9c3d0;
-      border-radius: 12px;
-      background: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
+      height: 68px;
+      margin-top: 17px;
+      border: 0;
+      border-radius: 19px;
+      background:
+        linear-gradient(
+          100deg,
+          #09d3ff,
+          #147dff,
+          #5735ff
+        );
+      color: white;
+      font-size: 20px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow:
+        0 13px 38px rgba(21,108,255,.34);
+      transition:
+        transform .2s,
+        box-shadow .2s;
+    }
+
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 17px 48px rgba(21,108,255,.48);
+    }
+
+    .download-btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none;
     }
 
 
     /* =====================================================
-       SMALL TEXT
+       BOTTOM INFO
     ====================================================== */
 
     .small {
-      margin-top: 24px;
-      color: #788397;
-      font-size: 14px;
+      margin-top: 25px;
+      color: #7f94b7;
+      font-size: 13px;
       line-height: 1.7;
       text-align: center;
+    }
+
+
+    /* =====================================================
+       FEATURES
+    ====================================================== */
+
+    .features {
+      display: grid;
+      grid-template-columns:
+        repeat(4, 1fr);
+      gap: 25px;
+      margin: 40px 0 20px;
+      text-align: center;
+    }
+
+    .feature-icon {
+      width: 52px;
+      height: 52px;
+      margin: auto;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 25px;
+      background:
+        rgba(24,68,135,.45);
+      border: 1px solid rgba(103,153,235,.16);
+    }
+
+    .feature:nth-child(1) .feature-icon {
+      color: #48ffad;
+      box-shadow:
+        0 0 25px rgba(48,255,169,.14);
+    }
+
+    .feature:nth-child(2) .feature-icon {
+      color: #b68cff;
+      box-shadow:
+        0 0 25px rgba(150,92,255,.14);
+    }
+
+    .feature:nth-child(3) .feature-icon {
+      color: #ffbd49;
+      box-shadow:
+        0 0 25px rgba(255,190,60,.14);
+    }
+
+    .feature:nth-child(4) .feature-icon {
+      color: #ff7295;
+      box-shadow:
+        0 0 25px rgba(255,80,125,.14);
+    }
+
+    .feature-title {
+      margin-top: 12px;
+      font-weight: 900;
+      font-size: 15px;
+    }
+
+    .feature-text {
+      margin-top: 5px;
+      color: #8194b5;
+      font-size: 12px;
+      line-height: 1.5;
     }
 
 
@@ -358,11 +748,11 @@
     ====================================================== */
 
     footer {
-      margin-top: 35px;
-      color: #788397;
+      margin-top: 25px;
+      color: #7185a6;
       text-align: center;
       line-height: 1.7;
-      font-size: 14px;
+      font-size: 13px;
     }
 
 
@@ -370,57 +760,133 @@
        MOBILE
     ====================================================== */
 
-    @media (max-width: 600px) {
+    @media (max-width: 760px) {
 
       .page {
-        padding: 12px 16px 40px;
+        padding: 12px 13px 45px;
       }
 
       .top-ad {
-        min-height: 82px;
-        margin-bottom: 22px;
+        margin-bottom: 27px;
       }
 
       .test-ad {
-        min-height: 82px;
-        padding: 10px 12px;
+        min-height: 76px;
+        padding: 9px 12px;
       }
 
-      .test-ad-brand {
-        font-size: 19px;
+      .ad-brand {
+        font-size: 17px;
       }
 
-      .test-ad-sub {
-        font-size: 10px;
+      .ad-sub {
+        font-size: 9px;
       }
 
-      .test-ad-button {
-        padding: 10px 12px;
-        font-size: 10px;
+      .ad-button {
+        padding: 9px 10px;
+        font-size: 9px;
       }
 
-      .card {
-        padding: 20px;
-        border-radius: 28px;
+      .brand-icon {
+        width: 62px;
+        height: 62px;
+        border-radius: 19px;
+        font-size: 28px;
+      }
+
+      .brand-icon::after {
+        width: 27px;
+        height: 27px;
+        font-size: 18px;
+      }
+
+      .brand-name {
+        font-size: 30px;
+      }
+
+      .brand-subtitle {
+        font-size: 15px;
+      }
+
+      .tags {
+        margin-bottom: 24px;
+      }
+
+      .tag {
+        padding: 8px 13px;
+        font-size: 12px;
       }
 
       h1 {
-        font-size: 46px;
+        font-size: 48px;
         letter-spacing: -3px;
       }
 
       .intro {
-        font-size: 18px;
+        font-size: 16px;
+        line-height: 1.65;
       }
 
-      input,
-      select,
-      button {
+      .floating-badge {
+        display: none;
+      }
+
+      .main-card {
+        padding: 14px;
+        border-radius: 23px;
+      }
+
+      .input-row {
+        grid-template-columns: 1fr;
+        gap: 11px;
+      }
+
+      input {
         height: 60px;
+        font-size: 15px;
+      }
+
+      #checkBtn {
+        height: 60px;
+        font-size: 16px;
+      }
+
+      .thumbnail-box {
+        border-radius: 18px;
       }
 
       .title {
-        font-size: 22px;
+        font-size: 21px;
+      }
+
+      .download-btn {
+        height: 62px;
+        font-size: 18px;
+      }
+
+      .features {
+        grid-template-columns:
+          repeat(2, 1fr);
+        gap: 28px 10px;
+        margin-top: 35px;
+      }
+
+    }
+
+
+    @media (max-width: 380px) {
+
+      h1 {
+        font-size: 43px;
+      }
+
+      .brand-name {
+        font-size: 27px;
+      }
+
+      .test-ad-button {
+        display: none;
       }
 
     }
@@ -436,31 +902,31 @@
 
 
     <!-- =================================================
-         BANNER IKLAN ATAS
+         IKLAN ATAS
     ================================================== -->
 
-    <div class="top-ad">
+    <div class="ad-box top-ad">
 
       <div class="test-ad">
 
-        <div class="test-ad-left">
+        <div class="ad-left">
 
-          <div class="test-ad-label">
-            Iklan
+          <div class="ad-label">
+            IKLAN
           </div>
 
-          <div class="test-ad-brand">
-            <span>G</span><span>o</span><span>o</span><span>gle</span>
+          <div class="ad-brand">
+            <span class="ad-google">Google</span>
             AdSense
           </div>
 
-          <div class="test-ad-sub">
+          <div class="ad-sub">
             Ruang iklan banner responsif
           </div>
 
         </div>
 
-        <div class="test-ad-button">
+        <div class="ad-button">
           IKLAN TEST
         </div>
 
@@ -470,57 +936,144 @@
 
 
     <!-- =================================================
-         HEADER
+         BRAND
     ================================================== -->
 
-    <div class="badge">
-      MP4 · CEPAT · SEDERHANA
-    </div>
+    <div class="brand-row">
 
+      <div class="brand-icon">
+        ▶
+      </div>
 
-    <h1>
-      Video favoritmu,<br>
-      siap ditonton offline.
-    </h1>
+      <div>
 
+        <div class="brand-name">
+          Video <span>Fetch</span>
+        </div>
 
-    <div class="intro">
-      Tempel URL YouTube, pilih kualitas,
-      dan dapatkan file MP4. Gunakan hanya
-      untuk konten yang Anda miliki atau
-      diizinkan untuk diunduh.
+        <div class="brand-subtitle">
+          Pengunduh Video YouTube
+        </div>
+
+      </div>
+
     </div>
 
 
     <!-- =================================================
-         CARD
+         TAGS
     ================================================== -->
 
-    <section class="card">
+    <div class="tags">
+
+      <div class="tag">
+        MP4
+      </div>
+
+      <div class="tag">
+        Cepat
+      </div>
+
+      <div class="tag">
+        Gratis
+      </div>
+
+      <div class="tag">
+        Tanpa Aplikasi
+      </div>
+
+    </div>
 
 
-      <!-- URL -->
+    <!-- =================================================
+         HERO
+    ================================================== -->
 
-      <input
-        id="url"
-        type="url"
-        inputmode="url"
-        autocomplete="off"
-        placeholder="https://youtube.com/watch?v=..."
-      >
+    <section class="hero">
+
+      <div class="hero-content">
+
+        <h1>
+          Video favoritmu,<br>
+          <span class="gradient">
+            siap ditonton offline.
+          </span>
+        </h1>
+
+        <div class="intro">
+          Tempel URL YouTube, pilih kualitas,
+          dan dapatkan file MP4 dengan cepat
+          dan mudah digunakan.
+        </div>
+
+      </div>
 
 
-      <!-- PERIKSA -->
+      <div class="floating-badge badge-mp4">
+        MP4
+      </div>
 
-      <button
-        id="checkBtn"
-        type="button"
-      >
-        Periksa video
-      </button>
+      <div class="floating-badge badge-4k">
+        4K
+      </div>
+
+      <div class="floating-badge badge-hd">
+        HD
+      </div>
+
+    </section>
 
 
-      <!-- STATUS -->
+    <!-- =================================================
+         MAIN CARD
+    ================================================== -->
+
+    <section class="main-card">
+
+
+      <!-- =================================================
+           INPUT
+      ================================================== -->
+
+      <div class="input-row">
+
+        <div class="input-wrap">
+
+          <div class="input-icon">
+            🔗
+          </div>
+
+          <input
+            id="url"
+            type="url"
+            inputmode="url"
+            autocomplete="off"
+            placeholder="https://youtube.com/watch?v=..."
+          >
+
+          <div
+            id="clearUrl"
+            class="clear-icon"
+          >
+            ×
+          </div>
+
+        </div>
+
+
+        <button
+          id="checkBtn"
+          type="button"
+        >
+          🔍 &nbsp; Periksa video
+        </button>
+
+      </div>
+
+
+      <!-- =================================================
+           STATUS
+      ================================================== -->
 
       <div
         id="status"
@@ -529,7 +1082,8 @@
 
 
       <!-- =================================================
-           THUMBNAIL — SATU SAJA
+           THUMBNAIL
+           CUMA SATU
       ================================================== -->
 
       <div
@@ -547,7 +1101,7 @@
 
 
       <!-- =================================================
-           INFORMASI VIDEO
+           VIDEO INFO
       ================================================== -->
 
       <div
@@ -560,14 +1114,19 @@
           class="title"
         ></h2>
 
-
         <div
           id="videoMeta"
           class="meta"
         ></div>
 
 
-        <!-- KUALITAS -->
+        <!-- =================================================
+             QUALITY
+        ================================================== -->
+
+        <div class="quality-title">
+          Pilih kualitas
+        </div>
 
         <div class="quality">
 
@@ -580,43 +1139,45 @@
         </div>
 
 
-        <!-- DOWNLOAD -->
+        <!-- =================================================
+             DOWNLOAD
+        ================================================== -->
 
         <button
           id="downloadBtn"
           class="download-btn"
           type="button"
         >
-          Unduh MP4
+          ↓ &nbsp; Unduh MP4
         </button>
 
 
         <!-- =================================================
-             IKLAN TEST BAWAH
+             IKLAN BAWAH
         ================================================== -->
 
-        <div class="bottom-ad">
+        <div class="ad-box bottom-ad">
 
           <div class="test-ad">
 
-            <div class="test-ad-left">
+            <div class="ad-left">
 
-              <div class="test-ad-label">
-                Iklan
+              <div class="ad-label">
+                IKLAN
               </div>
 
-              <div class="test-ad-brand">
-                <span>G</span><span>o</span><span>o</span><span>gle</span>
+              <div class="ad-brand">
+                <span class="ad-google">Google</span>
                 AdSense
               </div>
 
-              <div class="test-ad-sub">
+              <div class="ad-sub">
                 Ruang iklan banner responsif
               </div>
 
             </div>
 
-            <div class="test-ad-button">
+            <div class="ad-button">
               IKLAN TEST
             </div>
 
@@ -628,12 +1189,96 @@
       </div>
 
 
-      <!-- INFO -->
+      <!-- =================================================
+           SMALL INFO
+      ================================================== -->
 
       <div class="small">
         Mendukung video, Shorts, dan tautan youtu.be.
         Siaran langsung yang sedang berlangsung
         tidak didukung.
+      </div>
+
+
+    </section>
+
+
+    <!-- =================================================
+         FEATURES
+    ================================================== -->
+
+    <section class="features">
+
+
+      <div class="feature">
+
+        <div class="feature-icon">
+          ⚡
+        </div>
+
+        <div class="feature-title">
+          Cepat & Stabil
+        </div>
+
+        <div class="feature-text">
+          Proses download
+          lebih cepat
+        </div>
+
+      </div>
+
+
+      <div class="feature">
+
+        <div class="feature-icon">
+          🛡
+        </div>
+
+        <div class="feature-title">
+          Aman Digunakan
+        </div>
+
+        <div class="feature-text">
+          Tanpa instal
+          aplikasi
+        </div>
+
+      </div>
+
+
+      <div class="feature">
+
+        <div class="feature-icon">
+          ▣
+        </div>
+
+        <div class="feature-title">
+          Semua Perangkat
+        </div>
+
+        <div class="feature-text">
+          HP, tablet
+          dan komputer
+        </div>
+
+      </div>
+
+
+      <div class="feature">
+
+        <div class="feature-icon">
+          ♥
+        </div>
+
+        <div class="feature-title">
+          Mudah Digunakan
+        </div>
+
+        <div class="feature-text">
+          Tampilan sederhana
+          dan modern
+        </div>
+
       </div>
 
 
@@ -657,6 +1302,7 @@
 
   <!-- =====================================================
        JAVASCRIPT
+       FUNGSI DOWNLOAD TETAP
   ====================================================== -->
 
   <script>
@@ -698,6 +1344,9 @@
     const videoMeta =
       document.getElementById("videoMeta");
 
+    const clearUrl =
+      document.getElementById("clearUrl");
+
 
     /* =====================================================
        STATE
@@ -706,6 +1355,40 @@
     let currentVideoId = "";
 
     let currentVideoUrl = "";
+
+
+    /* =====================================================
+       CLEAR URL
+    ===================================================== */
+
+    urlInput.addEventListener(
+      "input",
+      function () {
+
+        clearUrl.style.display =
+          urlInput.value.trim()
+            ? "block"
+            : "none";
+
+      }
+    );
+
+
+    clearUrl.addEventListener(
+      "click",
+      function () {
+
+        urlInput.value = "";
+
+        clearUrl.style.display =
+          "none";
+
+        resetVideo();
+
+        urlInput.focus();
+
+      }
+    );
 
 
     /* =====================================================
@@ -749,8 +1432,6 @@
         String(input || "").trim();
 
 
-      /* Direct ID */
-
       if (
         /^[A-Za-z0-9_-]{11}$/.test(
           text
@@ -785,8 +1466,6 @@
           );
 
 
-      /* youtu.be */
-
       if (
         host === "youtu.be"
       ) {
@@ -805,8 +1484,6 @@
       }
 
 
-      /* YouTube */
-
       if (
         ![
           "youtube.com",
@@ -820,24 +1497,23 @@
       }
 
 
-      /* watch?v= */
-
       if (
-        url.pathname === "/watch"
+        url.pathname ===
+        "/watch"
       ) {
 
         const id =
           url.searchParams.get("v");
 
         return id &&
-          /^[A-Za-z0-9_-]{11}$/.test(id)
+          /^[A-Za-z0-9_-]{11}$/.test(
+            id
+          )
           ? id
           : null;
 
       }
 
-
-      /* Shorts / Embed / Live */
 
       const match =
         url.pathname.match(
@@ -853,7 +1529,7 @@
 
 
     /* =====================================================
-       FORMAT DURASI
+       DURATION
     ===================================================== */
 
     function formatDuration(
@@ -975,8 +1651,6 @@
         urlInput.value.trim();
 
 
-      /* Validasi ID */
-
       if (
         !/^[A-Za-z0-9_-]{11}$/.test(
           currentVideoId
@@ -990,8 +1664,8 @@
 
 
       /* =================================================
-         THUMBNAIL
-      ================================================= */
+         THUMBNAIL SATU
+      ================================================== */
 
       if (
         info.thumbnail
@@ -1013,7 +1687,7 @@
 
       /* =================================================
          TITLE
-      ================================================= */
+      ================================================== */
 
       videoTitle.textContent =
         info.title ||
@@ -1022,7 +1696,7 @@
 
       /* =================================================
          META
-      ================================================= */
+      ================================================== */
 
       const meta = [];
 
@@ -1059,7 +1733,7 @@
 
       /* =================================================
          QUALITY
-      ================================================= */
+      ================================================== */
 
       quality.innerHTML =
         "";
@@ -1087,8 +1761,6 @@
           (a, b) => b - a
         );
 
-
-      /* Fallback */
 
       if (
         heights.length === 0
@@ -1150,13 +1822,11 @@
       }
 
 
-      /* Tampilkan */
-
       videoInfo.style.display =
         "block";
 
 
-      /* Scroll ke thumbnail */
+      /* Scroll */
 
       setTimeout(
         () => {
@@ -1177,7 +1847,8 @@
 
     /* =====================================================
        PERIKSA VIDEO
-    ===================================================== */
+       API TETAP /api/info
+    ====================================================== */
 
     checkBtn.addEventListener(
       "click",
@@ -1304,7 +1975,7 @@
             false;
 
           checkBtn.textContent =
-            "Periksa video";
+            "🔍  Periksa video";
 
         }
 
@@ -1314,7 +1985,8 @@
 
     /* =====================================================
        DOWNLOAD MP4
-    ===================================================== */
+       API TETAP /api/download
+    ====================================================== */
 
     downloadBtn.addEventListener(
       "click",
@@ -1376,8 +2048,6 @@
 
         try {
 
-          /* REQUEST DOWNLOAD */
-
           const response =
             await fetch(
               "/api/download",
@@ -1392,7 +2062,6 @@
 
                 body:
                   JSON.stringify({
-
                     url:
                       videoUrl,
 
@@ -1401,7 +2070,6 @@
 
                     height:
                       height
-
                   })
               }
             );
@@ -1454,7 +2122,6 @@
             attempt++
           ) {
 
-
             await new Promise(
               resolve =>
                 setTimeout(
@@ -1484,8 +2151,6 @@
                   () => ({})
                 );
 
-
-            /* READY */
 
             if (
               job.status ===
@@ -1518,8 +2183,6 @@
             }
 
 
-            /* FAILED */
-
             if (
               job.status ===
               "failed"
@@ -1532,8 +2195,6 @@
 
             }
 
-
-            /* PROCESSING */
 
             showStatus(
               "Video sedang diproses, tunggu...",
@@ -1564,7 +2225,7 @@
             false;
 
           downloadBtn.textContent =
-            "Unduh MP4";
+            "↓  Unduh MP4";
 
         }
 
