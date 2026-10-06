@@ -5,7 +5,7 @@ WORKDIR /app
 ENV NODE_ENV=production \
     PATH="/opt/venv/bin:${PATH}"
 
-# Pasang FFmpeg dan Python untuk yt-dlp
+# Pasang Python, FFmpeg, dan yt-dlp
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -18,14 +18,14 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Pasang dependensi Node.js dari package-lock.json
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# Salin file konfigurasi Node.js dan pasang dependensi
+COPY package*.json ./
+RUN npm install --omit=dev
 
 # Salin kode aplikasi
 COPY . .
 
-# Pastikan program pendukung berhasil dipasang
+# Periksa apakah program yang dibutuhkan tersedia
 RUN node --version \
     && yt-dlp --version \
     && ffmpeg -version
