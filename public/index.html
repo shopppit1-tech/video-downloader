@@ -1,939 +1,281 @@
 <!doctype html>
 <html lang="id">
-
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Pengunduh video MP4 dengan cepat dan mudah.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Video Fetch">
   <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#ffffff">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Video Fetch">
-
-<meta charset="utf-8">
-
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1"
->
-
-<title>VideoFetch — MP4 Downloader</title>
-
-<style>
-
-:root{
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-
-  color:#eaf0ff;
-  background:#0d1224;
-}
-
-*{
-  box-sizing:border-box;
-}
-
-body{
-  margin:0;
-  min-height:100vh;
-
-  background:
-    radial-gradient(
-      circle at 15% 0%,
-      #23346b 0,
-      #0d1224 38%,
-      #090d1a 100%
-    );
-}
-
-.wrap{
-  width:min(960px,92%);
-  margin:auto;
-}
-
-.nav{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:28px 0;
-
-  color:#aebbe2;
-  font-size:.9rem;
-}
-
-.brand{
-  font-weight:800;
-  font-size:1.2rem;
-  color:#fff;
-  letter-spacing:-.04em;
-}
-
-.brand span{
-  color:#7c8cff;
-}
-
-.hero{
-  text-align:center;
-  padding:52px 0 30px;
-}
-
-.eyebrow{
-  color:#8f9dff;
-  font-weight:700;
-  letter-spacing:.12em;
-  text-transform:uppercase;
-  font-size:.75rem;
-}
-
-.hero h1{
-  font-size:
-    clamp(2.3rem,6vw,4.7rem);
-
-  line-height:1.02;
-  letter-spacing:-.07em;
-
-  margin:
-    18px auto 16px;
-
-  max-width:780px;
-}
-
-.hero p{
-  color:#aab5d0;
-
-  max-width:600px;
-
-  margin:0 auto;
-
-  font-size:1.05rem;
-
-  line-height:1.7;
-}
-
-.card{
-  background:
-    rgba(21,29,55,.82);
-
-  border:
-    1px solid #2d3965;
-
-  border-radius:24px;
-
-  padding:26px;
-
-  box-shadow:
-    0 24px 80px rgba(0,0,0,.3);
-
-  backdrop-filter:blur(12px);
-}
-
-.inputrow{
-  display:flex;
-  gap:12px;
-}
-
-.inputrow input{
-  flex:1;
-
-  background:#0b1020;
-
-  border:
-    1px solid #35436f;
-
-  border-radius:13px;
-
-  padding:17px;
-
-  color:#fff;
-
-  font-size:1rem;
-
-  outline:none;
-}
-
-.inputrow input:focus{
-  border-color:#8c98ff;
-
-  box-shadow:
-    0 0 0 3px #6977ff22;
-}
-
-.btn{
-  border:0;
-
-  border-radius:13px;
-
-  padding:
-    0 24px;
-
-  background:#7886ff;
-
-  color:#fff;
-
-  font-weight:800;
-
-  font-size:1rem;
-
-  cursor:pointer;
-}
-
-.btn:hover{
-  background:#91a0ff;
-}
-
-.btn:disabled{
-  opacity:.5;
-  cursor:wait;
-}
-
-.hint,
-.status{
-  color:#929fbe;
-
-  font-size:.9rem;
-
-  margin:
-    14px 2px 0;
-}
-
-.status.error{
-  color:#ff9d9d;
-}
-
-.status.success{
-  color:#9dffbf;
-}
-
-.result{
-  display:none;
-
-  margin-top:20px;
-
-  grid-template-columns:
-    190px 1fr;
-
-  gap:22px;
-
-  align-items:start;
-}
-
-.result.show{
-  display:grid;
-}
-
-.thumb{
-  width:100%;
-
-  aspect-ratio:16/9;
-
-  object-fit:cover;
-
-  border-radius:14px;
-
-  background:#0b1020;
-}
-
-.result h2{
-  font-size:1.25rem;
-
-  margin:
-    2px 0 9px;
-}
-
-.meta{
-  color:#9faaca;
-
-  margin-bottom:18px;
-}
-
-.select{
-  background:#0b1020;
-
-  border:
-    1px solid #35436f;
-
-  border-radius:10px;
-
-  color:#fff;
-
-  padding:
-    11px 14px;
-
-  margin-right:10px;
-}
-
-.footer{
-  text-align:center;
-
-  color:#7885a5;
-
-  font-size:.8rem;
-
-  padding:
-    34px 0 48px;
-
-  line-height:1.6;
-}
-
-@media(max-width:620px){
-
-  .inputrow{
-    flex-direction:column;
-  }
-
-  .btn{
-    padding:15px;
-  }
-
-  .result.show{
-    grid-template-columns:1fr;
-  }
-
-  .thumb{
-    max-width:360px;
-  }
-
-  .hero{
-    padding-top:25px;
-  }
-
-}
-
-</style>
-
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <title>Video Fetch — Pengunduh Video</title>
+
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#f8fbff,#eef4ff);color:#172033}
+    .wrap{max-width:760px;margin:auto;padding:22px 16px 50px}
+    .brand{font-weight:900;font-size:24px;letter-spacing:-.5px}
+    .badge{display:inline-block;margin-top:10px;padding:6px 11px;border-radius:999px;background:#e8f1ff;color:#1769e0;font-size:12px;font-weight:800}
+    .hero{padding:38px 0 24px}
+    h1{font-size:clamp(34px,9vw,58px);line-height:1.02;margin:0 0 16px;letter-spacing:-2px}
+    .lead{font-size:16px;line-height:1.65;color:#667085;margin:0}
+    .card{background:#fff;border:1px solid #e7ebf3;border-radius:24px;padding:18px;box-shadow:0 14px 40px rgba(26,45,80,.08)}
+    .row{display:flex;gap:10px}
+    input,select{width:100%;border:1px solid #dfe5ef;background:#fff;border-radius:14px;padding:15px;font-size:15px;outline:none}
+    input:focus,select:focus{border-color:#2878f0;box-shadow:0 0 0 4px rgba(40,120,240,.1)}
+    button{border:0;border-radius:14px;padding:14px 18px;font-size:15px;font-weight:800;cursor:pointer;background:#1769e0;color:#fff}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .check{min-width:130px}
+    .download{width:100%;margin-top:12px}
+    .status{margin-top:14px;padding:13px 14px;border-radius:14px;background:#f5f7fa;color:#667085;font-size:14px;line-height:1.5;display:none}
+    .status.show{display:block}
+    .status.error{background:#fff0f0;color:#b42318}
+    .status.ok{background:#ecfdf3;color:#027a48}
+    .result{margin-top:14px;display:none}
+    .result.show{display:block}
+    .meta{font-weight:800;margin-bottom:10px}
+    .hint{font-size:13px;color:#7b8494;line-height:1.55;margin-top:18px}
+    footer{font-size:12px;color:#8a93a3;text-align:center;margin-top:28px;line-height:1.6}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid #c9d4e6;border-top-color:#1769e0;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:7px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:520px){.row{flex-direction:column}.check{width:100%}}
+  </style>
 </head>
 
 <body>
-
 <main class="wrap">
+  <div class="brand">Video Fetch</div>
+  <div class="badge">MP4 · Cepat · Sementara</div>
 
-<nav class="nav">
+  <section class="hero">
+    <h1>Video favoritmu,<br>siap ditonton offline.</h1>
+    <p class="lead">
+      Tempel URL YouTube, pilih kualitas, dan dapatkan file MP4.
+      Gunakan hanya untuk konten yang Anda miliki atau diizinkan untuk diunduh.
+    </p>
+  </section>
 
-  <div class="brand">
-    Video<span>Fetch</span>
-  </div>
-
-  <div>
-    MP4 · Cepat · Sementara
-  </div>
-
-</nav>
-
-
-<section class="hero">
-
-  <div class="eyebrow">
-    Unduh dengan izin
-  </div>
-
-  <h1>
-    Video favoritmu,<br>
-    siap ditonton offline.
-  </h1>
-
-  <p>
-    Tempel URL YouTube,
-    pilih kualitas,
-    lalu download MP4.
-    Gunakan hanya untuk konten
-    yang Anda miliki atau diizinkan
-    untuk diunduh.
-  </p>
-
-</section>
-
-
-<section class="card">
-
-<form id="form">
-
-  <div class="inputrow">
-
-    <input
-      id="url"
-      type="url"
-      placeholder="https://www.youtube.com/watch?v=..."
-      required
-      autocomplete="off"
-    >
-
-    <button
-      class="btn"
-      id="check"
-      type="submit"
-    >
-      Periksa video
-    </button>
-
-  </div>
-
-</form>
-
-
-<div class="hint">
-
-  Mendukung YouTube,
-  Shorts, dan youtu.be.
-
-</div>
-
-
-<div
-  id="status"
-  class="status"
-  role="status"
-></div>
-
-
-<div
-  id="result"
-  class="result"
->
-
-  <img
-    id="thumb"
-    class="thumb"
-    alt="Thumbnail video"
-  >
-
-
-  <div>
-
-    <h2 id="title"></h2>
-
-    <div
-      id="meta"
-      class="meta"
-    ></div>
-
-
-    <div>
-
-      <label for="quality">
-        Kualitas:
-      </label>
-
-      <select
-        id="quality"
-        class="select"
-      ></select>
-
-
-      <button
-        id="download"
-        class="btn"
-        type="button"
-      >
-        Unduh MP4
-      </button>
-
+  <section class="card">
+    <div class="row">
+      <input id="url" type="url" inputmode="url"
+        placeholder="https://www.youtube.com/watch?v=..."
+        autocomplete="off">
+      <button id="checkBtn" class="check">Periksa video</button>
     </div>
 
-  </div>
+    <div id="status" class="status"></div>
 
-</div>
+    <div id="result" class="result">
+      <div id="title" class="meta"></div>
+      <select id="quality">
+        <option value="best">Kualitas terbaik</option>
+        <option value="1080">1080p</option>
+        <option value="720">720p</option>
+        <option value="480">480p</option>
+        <option value="360">360p</option>
+      </select>
+      <button id="downloadBtn" class="download">Unduh MP4</button>
+    </div>
 
-</section>
+    <div class="hint">
+      Mendukung video, Shorts, dan tautan youtu.be. Siaran langsung yang sedang
+      berlangsung tidak didukung.
+    </div>
+  </section>
 
-
-<footer class="footer">
-
-  File sementara dihapus
-  setelah diunduh atau kedaluwarsa.
-
-  <br>
-
-  Pastikan penggunaan mematuhi
-  Terms of Service YouTube
-  dan hukum setempat.
-
-</footer>
-
+  <footer>
+    File sementara dihapus setelah diunduh atau kedaluwarsa.<br>
+    Pastikan penggunaan mematuhi Terms of Service YouTube dan hukum setempat.
+  </footer>
 </main>
 
-
 <script>
+const $ = id => document.getElementById(id);
+const urlInput = $("url");
+const statusBox = $("status");
+const resultBox = $("result");
+const titleBox = $("title");
+const quality = $("quality");
+const checkBtn = $("checkBtn");
+const downloadBtn = $("downloadBtn");
 
-const $ =
-  selector =>
-    document.querySelector(selector);
+let videoData = null;
 
+/*
+ * Endpoint dicoba berurutan agar frontend tetap kompatibel dengan backend
+ * downloader yang menggunakan nama route berbeda.
+ */
+const INFO_ENDPOINTS = [
+  "/api/info",
+  "/api/video-info",
+  "/api/metadata",
+  "/api/check"
+];
 
-let video = null;
+const DOWNLOAD_ENDPOINTS = [
+  "/api/download",
+  "/api/download-video",
+  "/download"
+];
 
-
-/* =====================================================
-   STATUS
-   ===================================================== */
-
-function status(
-  text,
-  type = ""
-){
-
-  const el =
-    $("#status");
-
-  el.textContent =
-    text;
-
-  el.className =
-    "status";
-
-  if(type){
-    el.classList.add(type);
-  }
-
+function showStatus(message, type="") {
+  statusBox.className = "status show " + type;
+  statusBox.innerHTML = message;
 }
 
-
-/* =====================================================
-   RESPONSE JSON AMAN
-   ===================================================== */
-
-async function readResponse(
-  response
-){
-
-  const text =
-    await response.text();
-
-  let data = null;
-
-
-  try{
-
-    if(text){
-
-      data =
-        JSON.parse(text);
-
-    }
-
-  }catch{
-
-    data = null;
-
-  }
-
-
-  if(response.status === 429){
-
-    throw new Error(
-      "Terlalu banyak permintaan. Tunggu beberapa menit lalu coba lagi."
-    );
-
-  }
-
-
-  if(!response.ok){
-
-    if(
-      data &&
-      data.error
-    ){
-
-      throw new Error(
-        data.error
-      );
-
-    }
-
-    throw new Error(
-      `Server gagal (HTTP ${response.status}).`
-    );
-
-  }
-
-
-  if(!data){
-
-    throw new Error(
-      "Respons server tidak valid."
-    );
-
-  }
-
-
-  return data;
-
+function setLoading(button, loading, text) {
+  button.disabled = loading;
+  button.innerHTML = loading ? '<span class="spinner"></span>' + text : text;
 }
 
-
-/* =====================================================
-   PERIKSA VIDEO
-   ===================================================== */
-
-$("#form")
-.addEventListener(
-  "submit",
-  async event => {
-
-    event.preventDefault();
-
-
-    const url =
-      $("#url")
-      .value
-      .trim();
-
-
-    if(!url){
-
-      status(
-        "Masukkan URL YouTube.",
-        "error"
-      );
-
-      return;
-
-    }
-
-
-    $("#check")
-      .disabled = true;
-
-
-    $("#result")
-      .classList
-      .remove("show");
-
-
-    video = null;
-
-
-    status(
-      "Mengambil informasi video..."
-    );
-
-
-    try{
-
-      const response =
-        await fetch(
-          "/api/info",
-          {
-            method:"POST",
-
-            headers:{
-              "Content-Type":
-                "application/json",
-
-              "Accept":
-                "application/json"
-            },
-
-            body:
-              JSON.stringify({
-                url
-              })
-          }
-        );
-
-
-      const data =
-        await readResponse(
-          response
-        );
-
-
-      video = data;
-
-
-      $("#thumb").src =
-        data.thumbnail || "";
-
-
-      $("#title").textContent =
-        data.title ||
-        "Video";
-
-
-      const duration =
-        data.duration
-          ? `${Math.floor(data.duration / 60)} menit`
-          : "";
-
-
-      $("#meta").textContent =
-        [
-          data.uploader,
-          duration
-        ]
-        .filter(Boolean)
-        .join(" · ");
-
-
-      const heights =
-        Array.isArray(data.heights)
-        && data.heights.length
-          ? data.heights
-          : [360,480,720,1080];
-
-
-      $("#quality")
-        .innerHTML = "";
-
-
-      heights.forEach(
-        height => {
-
-          const option =
-            document.createElement(
-              "option"
-            );
-
-          option.value =
-            height;
-
-          option.textContent =
-            `${height}p`;
-
-          $("#quality")
-            .appendChild(
-              option
-            );
-
-        }
-      );
-
-
-      $("#result")
-        .classList
-        .add("show");
-
-
-      status(
-        "Video siap didownload.",
-        "success"
-      );
-
-
-    }catch(error){
-
-      console.error(error);
-
-      status(
-        error.message ||
-        "Gagal mengambil video.",
-        "error"
-      );
-
-    }finally{
-
-      $("#check")
-        .disabled = false;
-
-    }
-
+function validYouTubeUrl(value) {
+  try {
+    const u = new URL(value);
+    return /(^|\.)youtube\.com$|(^|\.)youtu\.be$/.test(u.hostname);
+  } catch {
+    return false;
   }
-);
+}
 
+async function requestEndpoint(paths, body) {
+  let lastError = null;
 
-/* =====================================================
-   DOWNLOAD
-   ===================================================== */
+  for (const path of paths) {
+    try {
+      const response = await fetch(path, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(body)
+      });
 
-$("#download")
-.addEventListener(
-  "click",
-  async () => {
+      if (response.status === 404 || response.status === 405) continue;
 
-    if(!video){
+      const contentType = response.headers.get("content-type") || "";
 
-      status(
-        "Periksa video terlebih dahulu.",
-        "error"
-      );
-
-      return;
-
-    }
-
-
-    $("#download")
-      .disabled = true;
-
-
-    status(
-      "Memulai download..."
-    );
-
-
-    try{
-
-      const response =
-        await fetch(
-          "/api/download",
-          {
-            method:"POST",
-
-            headers:{
-              "Content-Type":
-                "application/json",
-
-              "Accept":
-                "application/json"
-            },
-
-            body:
-              JSON.stringify({
-
-                videoId:
-                  video.id,
-
-                height:
-                  Number(
-                    $("#quality").value
-                  )
-
-              })
-          }
-        );
-
-
-      const data =
-        await readResponse(
-          response
-        );
-
-
-      if(!data.jobId){
-
-        throw new Error(
-          "Server tidak memberikan ID download."
-        );
-
+      if (contentType.includes("application/json")) {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || data.message || "Permintaan gagal");
+        return {response, data};
       }
 
+      if (response.ok) return {response, data:null};
+      lastError = new Error("HTTP " + response.status);
+    } catch (e) {
+      lastError = e;
+    }
+  }
 
-      const jobId =
-        data.jobId;
+  throw lastError || new Error("Endpoint tidak ditemukan.");
+}
 
+function pick(obj, keys) {
+  for (const key of keys) {
+    if (obj && obj[key] != null) return obj[key];
+  }
+  return null;
+}
 
-      let attempts = 0;
+checkBtn.addEventListener("click", async () => {
+  const url = urlInput.value.trim();
 
-      const maxAttempts =
-        300;
+  if (!validYouTubeUrl(url)) {
+    showStatus("Masukkan URL YouTube yang valid.", "error");
+    return;
+  }
 
+  resultBox.classList.remove("show");
+  videoData = null;
+  setLoading(checkBtn, true, "Memeriksa...");
 
-      while(
-        attempts < maxAttempts
-      ){
+  try {
+    const {data} = await requestEndpoint(INFO_ENDPOINTS, {url});
 
-        attempts++;
+    videoData = data || {url};
+    const title = pick(data, ["title","name","video_title"]) || "Video siap diunduh";
 
+    titleBox.textContent = title;
+    resultBox.classList.add("show");
+    showStatus("Video ditemukan. Pilih kualitas lalu tekan Unduh MP4.", "ok");
+  } catch (e) {
+    showStatus(
+      "Gagal memeriksa video. Pastikan URL benar dan server downloader sedang aktif.<br><small>" +
+      (e.message || "") + "</small>", "error"
+    );
+  } finally {
+    setLoading(checkBtn, false, "Periksa video");
+  }
+});
 
-        await new Promise(
-          resolve =>
-            setTimeout(
-              resolve,
-              3000
-            )
-        );
+downloadBtn.addEventListener("click", async () => {
+  const url = urlInput.value.trim();
+  if (!url) return;
 
+  setLoading(downloadBtn, true, "Menyiapkan MP4...");
 
-        const jobResponse =
-          await fetch(
-            `/api/jobs/${encodeURIComponent(jobId)}`,
-            {
-              cache:"no-store",
+  try {
+    const {response, data} = await requestEndpoint(DOWNLOAD_ENDPOINTS, {
+      url,
+      quality: quality.value
+    });
 
-              headers:{
-                "Accept":
-                  "application/json"
-              }
-            }
-          );
+    /*
+     * Backend bisa mengembalikan JSON berisi URL download,
+     * atau langsung mengembalikan file MP4.
+     */
+    if (data) {
+      const downloadUrl = pick(data, [
+        "download_url","downloadUrl","url","file","file_url","href"
+      ]);
 
+      if (!downloadUrl) throw new Error("Server tidak mengembalikan URL file.");
 
-        const job =
-          await readResponse(
-            jobResponse
-          );
-
-
-        if(
-          job.status === "failed"
-        ){
-
-          throw new Error(
-            job.error ||
-            "Download gagal."
-          );
-
-        }
-
-
-        if(
-          job.status === "ready"
-        ){
-
-          if(
-            !job.downloadUrl
-          ){
-
-            throw new Error(
-              "File siap tetapi URL download tidak tersedia."
-            );
-
-          }
-
-
-          status(
-            "File siap. Download dimulai.",
-            "success"
-          );
-
-
-          window.location.href =
-            job.downloadUrl;
-
-
-          return;
-
-        }
-
-
-        status(
-          "Memproses video dan audio..."
-        );
-
-      }
-
-
-      throw new Error(
-        "Download terlalu lama. Coba lagi nanti."
-      );
-
-
-    }catch(error){
-
-      console.error(error);
-
-      status(
-        error.message ||
-        "Download gagal.",
-        "error"
-      );
-
-    }finally{
-
-      $("#download")
-        .disabled = false;
-
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } else {
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = "video.mp4";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     }
 
+    showStatus("Download dimulai.", "ok");
+  } catch (e) {
+    showStatus(
+      "Download gagal. Pastikan server masih aktif dan kualitas tersedia.<br><small>" +
+      (e.message || "") + "</small>", "error"
+    );
+  } finally {
+    setLoading(downloadBtn, false, "Unduh MP4");
   }
-);
+});
 
+urlInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") checkBtn.click();
+});
+
+/* PWA Service Worker */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js", {scope:"/"})
+      .then(reg => console.log("Service Worker aktif:", reg.scope))
+      .catch(err => console.error("Service Worker gagal:", err));
+  });
+}
 </script>
-
 </body>
-
 </html>
