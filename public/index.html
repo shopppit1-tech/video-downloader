@@ -31,7 +31,20 @@
     href="/icon-192.png"
   >
 
+  <!-- =====================================================
+       GOOGLE ADSENSE
+       GANTI ID INI DENGAN ID ADSENSE KAMU
+  ====================================================== -->
+
+  <script
+    async
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456"
+    crossorigin="anonymous"
+  ></script>
+
+
   <style>
+
     * {
       box-sizing: border-box;
     }
@@ -158,7 +171,11 @@
       color: #175cd3;
     }
 
-    .video-box {
+    /* =====================================================
+       THUMBNAIL
+    ====================================================== */
+
+    .thumbnail-box {
       display: none;
       margin-top: 25px;
       overflow: hidden;
@@ -166,23 +183,18 @@
       background: #000;
     }
 
-    .video-box iframe {
-      display: block;
+    .thumbnail {
       width: 100%;
+      height: auto;
       aspect-ratio: 16 / 9;
-      border: 0;
+      object-fit: cover;
+      display: block;
+      border-radius: 24px;
     }
 
     .video-info {
       display: none;
       margin-top: 22px;
-    }
-
-    .thumbnail {
-      width: 100%;
-      display: block;
-      border-radius: 20px;
-      margin-bottom: 20px;
     }
 
     .title {
@@ -208,6 +220,33 @@
       font-weight: 700;
     }
 
+
+    /* =====================================================
+       IKLAN
+    ====================================================== */
+
+    .ad-container {
+      width: 100%;
+      margin: 28px 0;
+      padding: 10px 0;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .ad-label {
+      margin-bottom: 8px;
+      color: #9aa4b2;
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .adsbygoogle {
+      display: block;
+      width: 100%;
+      min-height: 100px;
+    }
+
+
     .small {
       margin-top: 24px;
       color: #788397;
@@ -224,7 +263,9 @@
       font-size: 14px;
     }
 
+
     @media (max-width: 600px) {
+
       .page {
         padding: 22px 16px 40px;
       }
@@ -248,9 +289,13 @@
       button {
         height: 60px;
       }
+
     }
+
   </style>
+
 </head>
+
 
 <body>
 
@@ -260,10 +305,12 @@
       MP4 · CEPAT · SEDERHANA
     </div>
 
+
     <h1>
       Video favoritmu,<br>
       siap ditonton offline.
     </h1>
+
 
     <div class="intro">
       Tempel URL YouTube, pilih kualitas,
@@ -272,7 +319,13 @@
       diizinkan untuk diunduh.
     </div>
 
+
     <section class="card">
+
+
+      <!-- =================================================
+           URL
+      ================================================== -->
 
       <input
         id="url"
@@ -282,6 +335,11 @@
         placeholder="https://youtube.com/watch?v=..."
       >
 
+
+      <!-- =================================================
+           PERIKSA
+      ================================================== -->
+
       <button
         id="checkBtn"
         type="button"
@@ -289,28 +347,24 @@
         Periksa video
       </button>
 
+
+      <!-- =================================================
+           STATUS
+      ================================================== -->
+
       <div
         id="status"
         class="status"
       ></div>
 
-      <!-- VIDEO YOUTUBE -->
-      <div
-        id="videoBox"
-        class="video-box"
-      >
-        <iframe
-          id="videoFrame"
-          title="Video YouTube"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowfullscreen
-        ></iframe>
-      </div>
 
-      <!-- INFORMASI VIDEO -->
+      <!-- =================================================
+           THUMBNAIL — CUMA SATU
+      ================================================== -->
+
       <div
-        id="videoInfo"
-        class="video-info"
+        id="thumbnailBox"
+        class="thumbnail-box"
       >
 
         <img
@@ -319,15 +373,34 @@
           alt="Thumbnail video"
         >
 
+      </div>
+
+
+      <!-- =================================================
+           INFORMASI VIDEO
+      ================================================== -->
+
+      <div
+        id="videoInfo"
+        class="video-info"
+      >
+
+
         <h2
           id="videoTitle"
           class="title"
         ></h2>
 
+
         <div
           id="videoMeta"
           class="meta"
         ></div>
+
+
+        <!-- =================================================
+             KUALITAS
+        ================================================== -->
 
         <div class="quality">
 
@@ -339,6 +412,11 @@
 
         </div>
 
+
+        <!-- =================================================
+             DOWNLOAD
+        ================================================== -->
+
         <button
           id="downloadBtn"
           class="download-btn"
@@ -347,7 +425,32 @@
           Unduh MP4
         </button>
 
+
+        <!-- =================================================
+             IKLAN TEST
+             POSISI DI BAWAH DOWNLOAD
+        ================================================== -->
+
+        <div class="ad-container">
+
+          <div class="ad-label">
+            Iklan
+          </div>
+
+          <ins
+            class="adsbygoogle"
+            style="display:block"
+            data-ad-client="ca-pub-1234567890123456"
+            data-ad-slot="1234567890"
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          ></ins>
+
+        </div>
+
+
       </div>
+
 
       <div class="small">
         Mendukung video, Shorts, dan tautan youtu.be.
@@ -355,7 +458,9 @@
         tidak didukung.
       </div>
 
+
     </section>
+
 
     <footer>
       File sementara dapat dihapus setelah diunduh
@@ -364,12 +469,12 @@
       sumber video.
     </footer>
 
+
   </main>
 
 
   <!-- =====================================================
        JAVASCRIPT
-       SEMUA JAVASCRIPT BERADA DI DALAM SCRIPT
   ====================================================== -->
 
   <script>
@@ -396,17 +501,14 @@
     const statusBox =
       document.getElementById("status");
 
-    const videoBox =
-      document.getElementById("videoBox");
-
-    const videoFrame =
-      document.getElementById("videoFrame");
-
-    const videoInfo =
-      document.getElementById("videoInfo");
+    const thumbnailBox =
+      document.getElementById("thumbnailBox");
 
     const thumbnail =
       document.getElementById("thumbnail");
+
+    const videoInfo =
+      document.getElementById("videoInfo");
 
     const videoTitle =
       document.getElementById("videoTitle");
@@ -465,10 +567,6 @@
         String(input || "").trim();
 
 
-      /*
-       * Kalau langsung ID
-       */
-
       if (
         /^[A-Za-z0-9_-]{11}$/.test(
           text
@@ -503,9 +601,7 @@
           );
 
 
-      /*
-       * youtu.be
-       */
+      /* youtu.be */
 
       if (
         host === "youtu.be"
@@ -525,9 +621,7 @@
       }
 
 
-      /*
-       * Domain YouTube
-       */
+      /* YouTube */
 
       if (
         ![
@@ -542,33 +636,24 @@
       }
 
 
-      /*
-       * /watch?v=
-       */
+      /* watch?v= */
 
       if (
-        url.pathname ===
-        "/watch"
+        url.pathname === "/watch"
       ) {
 
         const id =
-          url.searchParams.get(
-            "v"
-          );
+          url.searchParams.get("v");
 
         return id &&
-          /^[A-Za-z0-9_-]{11}$/.test(
-            id
-          )
+          /^[A-Za-z0-9_-]{11}$/.test(id)
           ? id
           : null;
 
       }
 
 
-      /*
-       * Shorts / embed / live
-       */
+      /* shorts / embed / live */
 
       const match =
         url.pathname.match(
@@ -598,15 +683,18 @@
         return "";
       }
 
+
       const hours =
         Math.floor(
           seconds / 3600
         );
 
+
       const minutes =
         Math.floor(
           (seconds % 3600) / 60
         );
+
 
       const secs =
         Math.floor(
@@ -649,7 +737,7 @@
 
 
     /* =====================================================
-       RESET VIDEO
+       RESET
     ===================================================== */
 
     function resetVideo() {
@@ -663,11 +751,8 @@
       videoInfo.style.display =
         "none";
 
-      videoBox.style.display =
+      thumbnailBox.style.display =
         "none";
-
-      videoFrame.src =
-        "";
 
       thumbnail.src =
         "";
@@ -687,7 +772,8 @@
 
 
     /* =====================================================
-       SHOW VIDEO
+       TAMPILKAN VIDEO
+       THUMBNAIL CUMA SATU
     ===================================================== */
 
     function showVideo(
@@ -695,23 +781,15 @@
       fallbackId
     ) {
 
-      /*
-       * ID dari server.
-       * Kalau tidak ada, gunakan ID dari URL.
-       */
-
       currentVideoId =
         info.id ||
         fallbackId ||
         "";
 
+
       currentVideoUrl =
         urlInput.value.trim();
 
-
-      /*
-       * Pastikan ID valid.
-       */
 
       if (
         !/^[A-Za-z0-9_-]{11}$/.test(
@@ -725,25 +803,7 @@
       }
 
 
-      /*
-       * YouTube player
-       */
-
-      videoFrame.src =
-        "https://www.youtube.com/embed/" +
-        encodeURIComponent(
-          currentVideoId
-        ) +
-        "?rel=0";
-
-
-      videoBox.style.display =
-        "block";
-
-
-      /*
-       * Thumbnail
-       */
+      /* Thumbnail */
 
       if (
         info.thumbnail
@@ -752,29 +812,25 @@
         thumbnail.src =
           info.thumbnail;
 
-        thumbnail.style.display =
+        thumbnailBox.style.display =
           "block";
 
       } else {
 
-        thumbnail.style.display =
+        thumbnailBox.style.display =
           "none";
 
       }
 
 
-      /*
-       * Title
-       */
+      /* Title */
 
       videoTitle.textContent =
         info.title ||
         "Video YouTube";
 
 
-      /*
-       * Meta
-       */
+      /* Meta */
 
       const meta = [];
 
@@ -809,9 +865,7 @@
         meta.join(" · ");
 
 
-      /*
-       * Quality
-       */
+      /* Quality */
 
       quality.innerHTML =
         "";
@@ -829,9 +883,7 @@
         [
           ...new Set(
             heights
-              .map(
-                Number
-              )
+              .map(Number)
               .filter(
                 Number.isFinite
               )
@@ -842,9 +894,7 @@
         );
 
 
-      /*
-       * Fallback
-       */
+      /* Fallback */
 
       if (
         heights.length === 0
@@ -882,11 +932,7 @@
       );
 
 
-      /*
-       * Default 480p.
-       * Kalau tidak tersedia,
-       * gunakan kualitas pertama.
-       */
+      /* Default 480p */
 
       if (
         heights.includes(480)
@@ -911,14 +957,33 @@
         "block";
 
 
-      /*
-       * Scroll ke video
-       */
+      /* Jalankan iklan */
+
+      try {
+
+        (
+          window.adsbygoogle =
+          window.adsbygoogle || []
+        ).push({});
+
+      } catch (
+        error
+      ) {
+
+        console.log(
+          "AdSense:",
+          error
+        );
+
+      }
+
+
+      /* Scroll */
 
       setTimeout(
         () => {
 
-          videoBox.scrollIntoView({
+          thumbnailBox.scrollIntoView({
             behavior:
               "smooth",
             block:
@@ -1033,10 +1098,6 @@
           }
 
 
-          /*
-           * Tampilkan video.
-           */
-
           showVideo(
             data,
             videoId
@@ -1081,12 +1142,6 @@
       "click",
       async function () {
 
-        /*
-         * PENTING:
-         * Gunakan URL asli dari input.
-         * Tidak bergantung pada ID lama.
-         */
-
         const videoUrl =
           urlInput.value.trim();
 
@@ -1102,10 +1157,6 @@
 
         }
 
-
-        /*
-         * Validasi URL.
-         */
 
         const videoId =
           extractYouTubeId(
@@ -1146,13 +1197,6 @@
 
 
         try {
-
-          /*
-           * KIRIM URL.
-           *
-           * Server akan mengambil ID
-           * dari URL tersebut.
-           */
 
           const response =
             await fetch(
@@ -1218,9 +1262,7 @@
           );
 
 
-          /*
-           * POLLING STATUS
-           */
+          /* POLLING */
 
           for (
             let attempt = 0;
@@ -1258,13 +1300,10 @@
                 );
 
 
-            /*
-             * File siap
-             */
+            /* READY */
 
             if (
-              job.status ===
-              "ready"
+              job.status === "ready"
             ) {
 
               if (
@@ -1284,10 +1323,6 @@
               );
 
 
-              /*
-               * MULAI DOWNLOAD
-               */
-
               window.location.href =
                 job.downloadUrl;
 
@@ -1297,13 +1332,10 @@
             }
 
 
-            /*
-             * Download gagal
-             */
+            /* FAILED */
 
             if (
-              job.status ===
-              "failed"
+              job.status === "failed"
             ) {
 
               throw new Error(
@@ -1314,9 +1346,7 @@
             }
 
 
-            /*
-             * Masih processing
-             */
+            /* PROCESSING */
 
             showStatus(
               "Video sedang diproses, tunggu...",
@@ -1364,8 +1394,7 @@
       function (event) {
 
         if (
-          event.key ===
-          "Enter"
+          event.key === "Enter"
         ) {
 
           event.preventDefault();
@@ -1383,8 +1412,7 @@
     ===================================================== */
 
     if (
-      "serviceWorker" in
-      navigator
+      "serviceWorker" in navigator
     ) {
 
       window.addEventListener(
