@@ -1,19 +1,17 @@
 {
-  "name": "youtube-video-downloader",
+  "name": "video-downloader",
   "version": "1.0.0",
-  "private": true,
-  "description": "Pengunduh video YouTube menjadi MP4 untuk konten yang diizinkan.",
+  "description": "YouTube Video Downloader",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node server.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "express-rate-limit": "^7.5.0"
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0"
   }
 }
