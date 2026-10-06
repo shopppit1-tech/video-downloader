@@ -383,9 +383,11 @@ async function getCookieFile() {
       ...new Set(candidates),
     ];
 
-    /*
-      Cari Secret File Render.
-    */
+    const runtimeCookieFile =
+      path.join(
+        TEMP_DIR,
+        "youtube-cookies-runtime.txt"
+      );
 
     for (const candidate of uniqueCandidates) {
       const sourcePath =
@@ -411,20 +413,6 @@ async function getCookieFile() {
 
           continue;
         }
-
-        /*
-          PENTING:
-          Jangan berikan /etc/secrets langsung
-          kepada yt-dlp karena read-only.
-
-          Salin dulu ke /tmp.
-        */
-
-        const runtimeCookieFile =
-          path.join(
-            TEMP_DIR,
-            "youtube-cookies-runtime.txt"
-          );
 
         await fsp.copyFile(
           sourcePath,
@@ -452,7 +440,7 @@ async function getCookieFile() {
         );
 
         console.log(
-          "Cookie YouTube: disalin ke /tmp agar dapat ditulis yt-dlp"
+          "Cookie YouTube: disalin ke /tmp agar aman ditulis yt-dlp"
         );
 
         return runtimeCookieFile;
@@ -465,11 +453,6 @@ async function getCookieFile() {
         }
       }
     }
-
-    /*
-      Fallback:
-      YOUTUBE_COOKIES langsung dari environment.
-    */
 
     const cookieText =
       String(
@@ -486,12 +469,6 @@ async function getCookieFile() {
           "YOUTUBE_COOKIES bukan format Netscape yang valid."
         );
       }
-
-      const runtimeCookieFile =
-        path.join(
-          TEMP_DIR,
-          "youtube-cookies-runtime.txt"
-        );
 
       await fsp.writeFile(
         runtimeCookieFile,
@@ -1280,10 +1257,6 @@ async function start() {
       mode: 0o700,
     }
   );
-
-  /*
-    Validasi cookie ketika server mulai.
-  */
 
   try {
     const cookieFile =
