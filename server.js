@@ -34,22 +34,14 @@ const MAX_VIDEO_DURATION_SECONDS = positiveNumber(
 );
 
 const YTDLP_TIMEOUT_MS =
-  positiveNumber(
-    process.env.YTDLP_TIMEOUT_SECONDS,
-    900
-  ) * 1000;
+  positiveNumber(process.env.YTDLP_TIMEOUT_SECONDS, 900) * 1000;
 
-const TEMP_DIR = path.join(
-  os.tmpdir(),
-  "video-downloader"
-);
-
+const TEMP_DIR = path.join(os.tmpdir(), "video-downloader");
 const APP_DIR = __dirname;
 
 const JOBS = new Map();
 
 let activeDownloads = 0;
-
 let cookieFilePromise = null;
 
 /* =========================================================
@@ -157,14 +149,11 @@ function appendLimited(
   chunk,
   maxLength = 2_000_000
 ) {
-  const next =
-    current + chunk.toString();
+  const next = current + chunk.toString();
 
-  if (next.length > maxLength) {
-    return next.slice(-maxLength);
-  }
-
-  return next;
+  return next.length > maxLength
+    ? next.slice(-maxLength)
+    : next;
 }
 
 function run(
@@ -180,18 +169,14 @@ function run(
     let timedOut = false;
     let killTimer = null;
 
-    const child = spawn(
-      command,
-      args,
-      {
-        windowsHide: true,
-        stdio: [
-          "ignore",
-          "pipe",
-          "pipe",
-        ],
-      }
-    );
+    const child = spawn(command, args, {
+      windowsHide: true,
+      stdio: [
+        "ignore",
+        "pipe",
+        "pipe",
+      ],
+    });
 
     const timeout = setTimeout(() => {
       timedOut = true;
@@ -207,112 +192,84 @@ function run(
 
     timeout.unref();
 
-    child.stdout.on(
-      "data",
-      (chunk) => {
-        stdout = appendLimited(
+    child.stdout.on("data", (chunk) => {
+      stdout = appendLimited(
+        stdout,
+        chunk
+      );
+    });
+
+    child.stderr.on("data", (chunk) => {
+      stderr = appendLimited(
+        stderr,
+        chunk
+      );
+    });
+
+    child.on("error", (error) => {
+      if (settled) return;
+
+      settled = true;
+
+      clearTimeout(timeout);
+
+      if (killTimer) {
+        clearTimeout(killTimer);
+      }
+
+      reject(
+        new Error(
+          `${command} tidak dapat dijalankan: ${error.message}`
+        )
+      );
+    });
+
+    child.on("close", (code, signal) => {
+      if (settled) return;
+
+      settled = true;
+
+      clearTimeout(timeout);
+
+      if (killTimer) {
+        clearTimeout(killTimer);
+      }
+
+      if (timedOut) {
+        reject(
+          new Error(
+            `yt-dlp melewati batas waktu ${Math.round(
+              timeoutMs / 1000
+            )} detik.`
+          )
+        );
+
+        return;
+      }
+
+      if (code === 0) {
+        resolve({
           stdout,
-          chunk
-        );
-      }
-    );
-
-    child.stderr.on(
-      "data",
-      (chunk) => {
-        stderr = appendLimited(
           stderr,
-          chunk
-        );
+        });
+
+        return;
       }
-    );
 
-    child.on(
-      "error",
-      (error) => {
-        if (settled) return;
-
-        settled = true;
-
-        clearTimeout(timeout);
-
-        if (killTimer) {
-          clearTimeout(killTimer);
-        }
-
-        reject(
-          new Error(
-            `${command} tidak dapat dijalankan: ${error.message}`
-          )
-        );
-      }
-    );
-
-    child.on(
-      "close",
-      (code, signal) => {
-        if (settled) return;
-
-        settled = true;
-
-        clearTimeout(timeout);
-
-        if (killTimer) {
-          clearTimeout(killTimer);
-        }
-
-        if (timedOut) {
-          reject(
-            new Error(
-              `yt-dlp melewati batas waktu ${Math.round(
-                timeoutMs / 1000
-              )} detik.`
-            )
-          );
-
-          return;
-        }
-
-        if (code === 0) {
-          resolve({
-            stdout,
-            stderr,
-          });
-
-          return;
-        }
-
-        reject(
-          new Error(
-            `${command} berhenti dengan kode ${code}${
-              signal
-                ? ` (${signal})`
-                : ""
-            }: ${stderr.slice(-5000)}`
-          )
-        );
-      }
-    );
+      reject(
+        new Error(
+          `${command} berhenti dengan kode ${code}${
+            signal ? ` (${signal})` : ""
+          }: ${stderr.slice(-5000)}`
+        )
+      );
+    });
   });
 }
 
 /* =========================================================
    COOKIE VALIDATION
 ========================================================= */
-
-/*
-  Netscape cookie format:
-
-  domain
-  includeSubdomains
-  path
-  secure
-  expiry
-  name
-  value
-
-  Dipisahkan TAB.
-*/
 
 function looksLikeNetscapeCookieFile(text) {
   if (!text || !text.trim()) {
@@ -330,45 +287,39 @@ function looksLikeNetscapeCookieFile(text) {
       continue;
     }
 
-    if (
-      line.startsWith("# Netscape HTTP Cookie File") ||
-      line.startsWith("# HTTP Cookie File") ||
-      line.startsWith("#")
-    ) {
+    if (line.startsWith("#")) {
       continue;
     }
 
     const parts = line.split("\t");
 
-    if (parts.length >= 7) {
-      const domain = parts[0];
-      const includeSubdomains = parts[1];
-      const cookiePath = parts[2];
-      const secure = parts[3];
-      const expiry = parts[4];
-      const name = parts[5];
+    if (parts.length < 7) {
+      continue;
+    }
 
-      if (
-        domain &&
-        (includeSubdomains === "TRUE" ||
-          includeSubdomains === "FALSE") &&
-        cookiePath &&
-        (secure === "TRUE" ||
-          secure === "FALSE") &&
-        /^\d+$/.test(expiry) &&
-        name
-      ) {
-        validCookieLines++;
-      }
+    const domain = parts[0];
+    const includeSubdomains = parts[1];
+    const cookiePath = parts[2];
+    const secure = parts[3];
+    const expiry = parts[4];
+    const name = parts[5];
+
+    if (
+      domain &&
+      (includeSubdomains === "TRUE" ||
+        includeSubdomains === "FALSE") &&
+      cookiePath &&
+      (secure === "TRUE" ||
+        secure === "FALSE") &&
+      /^\d+$/.test(expiry) &&
+      name
+    ) {
+      validCookieLines++;
     }
   }
 
   return validCookieLines > 0;
 }
-
-/* =========================================================
-   COOKIE FILE
-========================================================= */
 
 async function validateCookieFile(filePath) {
   let text;
@@ -385,10 +336,6 @@ async function validateCookieFile(filePath) {
     };
   }
 
-  /*
-   Jangan pernah log isi cookie.
-  */
-
   if (!looksLikeNetscapeCookieFile(text)) {
     return {
       ok: false,
@@ -402,56 +349,51 @@ async function validateCookieFile(filePath) {
   };
 }
 
+/* =========================================================
+   COOKIE
+   Render Secret File = READ ONLY.
+   Jadi Secret File SELALU disalin ke /tmp.
+========================================================= */
+
 async function getCookieFile() {
   if (cookieFilePromise) {
     return cookieFilePromise;
   }
 
   cookieFilePromise = (async () => {
-    /*
-      Prioritas:
+    await fsp.mkdir(
+      TEMP_DIR,
+      {
+        recursive: true,
+        mode: 0o700,
+      }
+    );
 
-      1. YOUTUBE_COOKIES_FILE
-      2. /etc/secrets/youtube-cookies.txt
-    */
-
-    const configured =
+    const configuredPath =
       String(
         process.env.YOUTUBE_COOKIES_FILE || ""
       ).trim();
 
-    const candidates = [];
-
-    if (configured) {
-      candidates.push(
-        configured
-      );
-    }
-
-    candidates.push(
-      "/etc/secrets/youtube-cookies.txt"
-    );
-
-    /*
-      Hilangkan duplikat.
-    */
+    const candidates = [
+      configuredPath,
+      "/etc/secrets/youtube-cookies.txt",
+    ].filter(Boolean);
 
     const uniqueCandidates = [
       ...new Set(candidates),
     ];
 
     /*
-      Cari file secret yang benar.
+      Cari Secret File Render.
     */
 
     for (const candidate of uniqueCandidates) {
-      const resolved = path.resolve(
-        candidate
-      );
+      const sourcePath =
+        path.resolve(candidate);
 
       try {
         const stat =
-          await fsp.stat(resolved);
+          await fsp.stat(sourcePath);
 
         if (!stat.isFile()) {
           continue;
@@ -459,31 +401,74 @@ async function getCookieFile() {
 
         const validation =
           await validateCookieFile(
-            resolved
+            sourcePath
           );
 
-        if (validation.ok) {
-          console.log(
-            `Cookie YouTube: valid (${resolved})`
+        if (!validation.ok) {
+          console.error(
+            `Cookie ditemukan tetapi tidak valid: ${sourcePath}`
           );
 
-          return resolved;
+          continue;
         }
 
-        console.error(
-          `Cookie YouTube ditemukan tetapi formatnya tidak valid: ${resolved}`
-        );
-      } catch {
         /*
-          Lanjut ke kandidat berikutnya.
+          PENTING:
+          Jangan berikan /etc/secrets langsung
+          kepada yt-dlp karena read-only.
+
+          Salin dulu ke /tmp.
         */
+
+        const runtimeCookieFile =
+          path.join(
+            TEMP_DIR,
+            "youtube-cookies-runtime.txt"
+          );
+
+        await fsp.copyFile(
+          sourcePath,
+          runtimeCookieFile
+        );
+
+        await fsp.chmod(
+          runtimeCookieFile,
+          0o600
+        ).catch(() => {});
+
+        const runtimeValidation =
+          await validateCookieFile(
+            runtimeCookieFile
+          );
+
+        if (!runtimeValidation.ok) {
+          throw new Error(
+            "Salinan cookie runtime tidak valid."
+          );
+        }
+
+        console.log(
+          "Cookie YouTube: valid"
+        );
+
+        console.log(
+          "Cookie YouTube: disalin ke /tmp agar dapat ditulis yt-dlp"
+        );
+
+        return runtimeCookieFile;
+      } catch (error) {
+        if (
+          error.message ===
+          "Salinan cookie runtime tidak valid."
+        ) {
+          throw error;
+        }
       }
     }
 
     /*
-      Fallback environment variable.
-      Ini dipakai kalau user tidak menggunakan
-      Secret File.
+      Fallback:
+      YOUTUBE_COOKIES langsung dari environment.
     */
 
     const cookieText =
@@ -498,26 +483,18 @@ async function getCookieFile() {
         )
       ) {
         throw new Error(
-          "YOUTUBE_COOKIES ada tetapi bukan format Netscape cookie yang valid."
+          "YOUTUBE_COOKIES bukan format Netscape yang valid."
         );
       }
 
-      const filePath =
+      const runtimeCookieFile =
         path.join(
           TEMP_DIR,
-          "youtube-cookies.txt"
+          "youtube-cookies-runtime.txt"
         );
 
-      await fsp.mkdir(
-        TEMP_DIR,
-        {
-          recursive: true,
-          mode: 0o700,
-        }
-      );
-
       await fsp.writeFile(
-        filePath,
+        runtimeCookieFile,
         `${cookieText}\n`,
         {
           encoding: "utf8",
@@ -526,19 +503,19 @@ async function getCookieFile() {
       );
 
       await fsp.chmod(
-        filePath,
+        runtimeCookieFile,
         0o600
       ).catch(() => {});
 
       console.log(
-        "Cookie YouTube: valid dari YOUTUBE_COOKIES"
+        "Cookie YouTube: valid dari environment"
       );
 
-      return filePath;
+      return runtimeCookieFile;
     }
 
     throw new Error(
-      "Cookie YouTube tidak ditemukan. Pastikan Secret File bernama youtube-cookies.txt dan isinya adalah cookie Netscape asli."
+      "Cookie YouTube tidak ditemukan. Pastikan Secret File youtube-cookies.txt tersedia."
     );
   })();
 
@@ -551,28 +528,18 @@ async function getCookieFile() {
 }
 
 /* =========================================================
-   YT-DLP ARGUMENTS
+   YT-DLP
 ========================================================= */
 
 async function baseYtDlpArgs() {
   const args = [
     "--no-playlist",
     "--no-warnings",
-
-    /*
-      Dibutuhkan yt-dlp untuk beberapa
-      proses YouTube terbaru.
-    */
     "--js-runtimes",
     "node",
-
     "--remote-components",
     "ejs:github",
   ];
-
-  /*
-    Cookie.
-  */
 
   const cookieFile =
     await getCookieFile();
@@ -600,7 +567,7 @@ async function baseYtDlpArgs() {
 }
 
 /* =========================================================
-   PUBLIC VIDEO INFO
+   VIDEO INFO
 ========================================================= */
 
 function publicVideoInfo(info) {
@@ -626,9 +593,7 @@ function publicVideoInfo(info) {
         )
     ),
   ]
-    .sort(
-      (a, b) => b - a
-    )
+    .sort((a, b) => b - a)
     .slice(0, 12);
 
   return {
@@ -643,7 +608,10 @@ function publicVideoInfo(info) {
       null,
 
     duration:
-      Number(info.duration || 0),
+      Number(
+        info.duration ||
+        0
+      ),
 
     uploader:
       info.uploader ||
@@ -661,14 +629,14 @@ function publicVideoInfo(info) {
 }
 
 /* =========================================================
-   USER ERROR
+   ERROR MESSAGE
 ========================================================= */
 
 function clientErrorMessage(error) {
   const message =
     String(
       error?.message ||
-        error
+      error
     );
 
   if (
@@ -677,9 +645,8 @@ function clientErrorMessage(error) {
     )
   ) {
     return (
-      "Cookie YouTube belum terbaca. " +
-      "Pastikan Secret File bernama youtube-cookies.txt " +
-      "dan Contents berisi isi cookie Netscape asli."
+      "Cookie YouTube belum terbaca dengan benar. " +
+      "Periksa Secret File youtube-cookies.txt."
     );
   }
 
@@ -690,7 +657,7 @@ function clientErrorMessage(error) {
   ) {
     return (
       "YouTube meminta verifikasi. " +
-      "Cookie YouTube yang dipasang tidak diterima oleh YouTube."
+      "Cookie sudah terbaca server tetapi ditolak oleh YouTube."
     );
   }
 
@@ -700,7 +667,7 @@ function clientErrorMessage(error) {
     )
   ) {
     return (
-      "Video privat atau terbatas dan tidak dapat diakses oleh server."
+      "Video privat atau terbatas dan tidak dapat diakses."
     );
   }
 
@@ -710,7 +677,7 @@ function clientErrorMessage(error) {
     )
   ) {
     return (
-      "YouTube membatasi video ini berdasarkan usia."
+      "Video dibatasi berdasarkan usia."
     );
   }
 
@@ -720,18 +687,17 @@ function clientErrorMessage(error) {
     )
   ) {
     return (
-      "Proses mengambil video melewati batas waktu. Coba lagi."
+      "Proses mengambil video melewati batas waktu."
     );
   }
 
   return (
-    "Video tidak dapat diproses. " +
-    "Periksa URL dan log server."
+    "Video tidak dapat diproses. Periksa log server."
   );
 }
 
 /* =========================================================
-   INSPECT VIDEO
+   INSPECT
 ========================================================= */
 
 async function inspectVideo(videoId) {
@@ -750,7 +716,9 @@ async function inspectVideo(videoId) {
     args
   );
 
-  return JSON.parse(stdout);
+  return JSON.parse(
+    stdout
+  );
 }
 
 /* =========================================================
@@ -767,38 +735,37 @@ async function removeFile(filePath) {
     {
       force: true,
     }
-  ).catch(
-    (error) => {
-      console.error(
-        "Gagal menghapus file sementara:",
-        error.message
-      );
-    }
-  );
+  ).catch((error) => {
+    console.error(
+      "Gagal menghapus file sementara:",
+      error.message
+    );
+  });
 }
 
 function scheduleDeletion(
   jobId,
   filePath
 ) {
-  const timer = setTimeout(
-    async () => {
-      await removeFile(
-        filePath
-      );
+  const timer =
+    setTimeout(
+      async () => {
+        await removeFile(
+          filePath
+        );
 
-      JOBS.delete(
-        jobId
-      );
-    },
-    FILE_TTL_MS
-  );
+        JOBS.delete(
+          jobId
+        );
+      },
+      FILE_TTL_MS
+    );
 
   timer.unref();
 }
 
 /* =========================================================
-   DOWNLOAD
+   CREATE DOWNLOAD
 ========================================================= */
 
 async function createDownload(
@@ -895,6 +862,9 @@ async function createDownload(
           ) &&
           !name.endsWith(
             ".ytdl"
+          ) &&
+          !name.includes(
+            "youtube-cookies"
           )
       );
 
@@ -941,13 +911,8 @@ async function createDownload(
         error
       );
 
-    /*
-      Log error yt-dlp.
-      Tidak pernah mencetak isi cookie.
-    */
-
     console.error(
-      `ERROR [${videoId}]:`,
+      `DOWNLOAD ERROR [${videoId}]:`,
       error.message
     );
   } finally {
@@ -973,7 +938,7 @@ app.get(
 );
 
 /* =========================================================
-   INFO API
+   INFO
 ========================================================= */
 
 app.post(
@@ -983,15 +948,17 @@ app.post(
       extractYouTubeId(
         String(
           req.body?.url ||
-            ""
+          ""
         ).trim()
       );
 
     if (!videoId) {
-      return res.status(400).json({
-        error:
-          "URL YouTube tidak valid.",
-      });
+      return res
+        .status(400)
+        .json({
+          error:
+            "URL YouTube tidak valid.",
+        });
     }
 
     console.log(
@@ -1005,10 +972,12 @@ app.post(
         );
 
       if (info.is_live) {
-        return res.status(400).json({
-          error:
-            "Siaran langsung yang belum selesai tidak didukung.",
-        });
+        return res
+          .status(400)
+          .json({
+            error:
+              "Siaran langsung yang belum selesai tidak didukung.",
+          });
       }
 
       if (
@@ -1016,17 +985,21 @@ app.post(
         info.duration >
           MAX_VIDEO_DURATION_SECONDS
       ) {
-        return res.status(413).json({
-          error:
-            `Durasi video melebihi batas ${Math.round(
-              MAX_VIDEO_DURATION_SECONDS /
+        return res
+          .status(413)
+          .json({
+            error:
+              `Durasi video melebihi batas ${Math.round(
+                MAX_VIDEO_DURATION_SECONDS /
                 60
-            )} menit.`,
-        });
+              )} menit.`,
+          });
       }
 
       return res.json(
-        publicVideoInfo(info)
+        publicVideoInfo(
+          info
+        )
       );
     } catch (error) {
       console.error(
@@ -1034,18 +1007,20 @@ app.post(
         error.message
       );
 
-      return res.status(422).json({
-        error:
-          clientErrorMessage(
-            error
-          ),
-      });
+      return res
+        .status(422)
+        .json({
+          error:
+            clientErrorMessage(
+              error
+            ),
+        });
     }
   }
 );
 
 /* =========================================================
-   DOWNLOAD API
+   DOWNLOAD
 ========================================================= */
 
 app.post(
@@ -1055,22 +1030,24 @@ app.post(
       activeDownloads >=
       MAX_CONCURRENT_DOWNLOADS
     ) {
-      return res.status(429).json({
-        error:
-          "Server sedang sibuk. Coba lagi setelah proses selesai.",
-      });
+      return res
+        .status(429)
+        .json({
+          error:
+            "Server sedang sibuk. Coba lagi setelah proses lain selesai.",
+        });
     }
 
     const videoId =
       String(
         req.body?.videoId ||
-          ""
+        ""
       );
 
     const height =
       Number(
         req.body?.height ||
-          1080
+        1080
       );
 
     if (
@@ -1078,10 +1055,12 @@ app.post(
         videoId
       )
     ) {
-      return res.status(400).json({
-        error:
-          "ID video tidak valid.",
-      });
+      return res
+        .status(400)
+        .json({
+          error:
+            "ID video tidak valid.",
+        });
     }
 
     const jobId =
@@ -1111,9 +1090,11 @@ app.post(
       height
     );
 
-    return res.status(202).json({
-      jobId,
-    });
+    return res
+      .status(202)
+      .json({
+        jobId,
+      });
   }
 );
 
@@ -1130,10 +1111,12 @@ app.get(
       );
 
     if (!job) {
-      return res.status(404).json({
-        error:
-          "Proses tidak ditemukan atau file sudah dihapus.",
-      });
+      return res
+        .status(404)
+        .json({
+          error:
+            "Proses tidak ditemukan atau file sudah dihapus.",
+        });
     }
 
     return res.json({
@@ -1153,7 +1136,8 @@ app.get(
         null,
 
       downloadUrl:
-        job.status === "ready"
+        job.status ===
+        "ready"
           ? `/api/jobs/${req.params.jobId}/file`
           : null,
     });
@@ -1161,7 +1145,7 @@ app.get(
 );
 
 /* =========================================================
-   FILE DOWNLOAD
+   DOWNLOAD FILE
 ========================================================= */
 
 app.get(
@@ -1174,13 +1158,16 @@ app.get(
 
     if (
       !job ||
-      job.status !== "ready" ||
+      job.status !==
+        "ready" ||
       !job.filePath
     ) {
-      return res.status(404).json({
-        error:
-          "File belum siap atau sudah dihapus.",
-      });
+      return res
+        .status(404)
+        .json({
+          error:
+            "File belum siap atau sudah dihapus.",
+        });
     }
 
     if (
@@ -1192,10 +1179,12 @@ app.get(
         req.params.jobId
       );
 
-      return res.status(410).json({
-        error:
-          "File sudah kedaluwarsa.",
-      });
+      return res
+        .status(410)
+        .json({
+          error:
+            "File sudah kedaluwarsa.",
+        });
     }
 
     res.setHeader(
@@ -1211,10 +1200,12 @@ app.get(
           error &&
           !res.headersSent
         ) {
-          res.status(500).json({
-            error:
-              "Pengiriman file gagal.",
-          });
+          res
+            .status(500)
+            .json({
+              error:
+                "Pengiriman file gagal.",
+            });
         }
 
         await removeFile(
@@ -1278,7 +1269,7 @@ const cleanupTimer =
 cleanupTimer.unref();
 
 /* =========================================================
-   START SERVER
+   START
 ========================================================= */
 
 async function start() {
@@ -1291,28 +1282,25 @@ async function start() {
   );
 
   /*
-    Tes cookie SEBELUM server dianggap siap.
-    Ini membuat kesalahan Secret File langsung terlihat
-    di Render Logs.
+    Validasi cookie ketika server mulai.
   */
 
   try {
-    await getCookieFile();
+    const cookieFile =
+      await getCookieFile();
 
     console.log(
-      "Cookie YouTube: siap digunakan"
+      "Cookie YouTube: SIAP"
+    );
+
+    console.log(
+      `Cookie runtime: ${cookieFile}`
     );
   } catch (error) {
     console.error(
-      "Cookie YouTube:",
+      "Cookie YouTube ERROR:",
       error.message
     );
-
-    /*
-      Server tetap hidup supaya halaman web
-      tetap bisa dibuka, tetapi /api/info akan
-      memberi pesan error yang jelas.
-    */
   }
 
   const server =
@@ -1325,10 +1313,12 @@ async function start() {
         );
 
         console.log(
-          "YOUTUBE_COOKIES_FILE:",
-          process.env.YOUTUBE_COOKIES_FILE
-            ? "diatur"
-            : "tidak diatur"
+          `YOUTUBE_COOKIES_FILE: ${
+            process.env
+              .YOUTUBE_COOKIES_FILE
+              ? "diatur"
+              : "tidak diatur"
+          }`
         );
       }
     );
@@ -1339,18 +1329,13 @@ async function start() {
         `${signal} diterima, menutup server...`
       );
 
-      server.close(
-        () => {
-          process.exit(0);
-        }
-      );
+      server.close(() => {
+        process.exit(0);
+      });
 
-      setTimeout(
-        () => {
-          process.exit(1);
-        },
-        10_000
-      ).unref();
+      setTimeout(() => {
+        process.exit(1);
+      }, 10_000).unref();
     };
 
   process.once(
