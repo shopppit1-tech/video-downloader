@@ -20,22 +20,51 @@ const maxVideoDuration =
   Number(process.env.MAX_VIDEO_DURATION_SECONDS || 7200);
 
 const tempDir = path.join(__dirname, "temp");
+const publicDir = path.join(__dirname, "public");
 
 const jobs = new Map();
 let activeDownloads = 0;
 
 app.disable("x-powered-by");
-
-/*
- * Render berada di belakang reverse proxy.
- * Ini wajib agar express-rate-limit tidak error
- * karena X-Forwarded-For.
- */
 app.set("trust proxy", 1);
 
 app.use(express.json({ limit: "10kb" }));
 
-app.use(express.static(path.join(__dirname, "public")));
+/* =========================
+   PUBLIC / PWA
+========================= */
+
+app.use(
+  express.static(publicDir, {
+    index: "index.html",
+    extensions: ["html"]
+  })
+);
+
+app.get("/manifest.json", (req, res) => {
+  res.type("application/manifest+json");
+  res.sendFile(path.join(publicDir, "manifest.json"));
+});
+
+app.get("/sw.js", (req, res) => {
+  res.type("application/javascript");
+  res.setHeader("Cache-Control", "no-cache");
+  res.sendFile(path.join(publicDir, "sw.js"));
+});
+
+app.get("/icon-192.png", (req, res) => {
+  res.type("image/png");
+  res.sendFile(path.join(publicDir, "icon-192.png"));
+});
+
+app.get("/icon-512.png", (req, res) => {
+  res.type("image/png");
+  res.sendFile(path.join(publicDir, "icon-512.png"));
+});
+
+/* =========================
+   API RATE LIMIT
+========================= */
 
 app.use(
   "/api",
@@ -43,7 +72,7 @@ app.use(
     windowMs: 15 * 60 * 1000,
     limit: 30,
     standardHeaders: true,
-    legacyHeaders: false,
+    legacyHeaders: false
   })
 );
 
@@ -73,7 +102,7 @@ function extractYouTubeId(input) {
     ![
       "youtube.com",
       "m.youtube.com",
-      "music.youtube.com",
+      "music.youtube.com"
     ].includes(host)
   ) {
     return null;
@@ -105,21 +134,21 @@ function youtubeUrl(videoId) {
 function run(command, args) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
-      windowsHide: true,
+      windowsHide: true
     });
 
     let stdout = "";
     let stderr = "";
 
-    child.stdout?.on("data", (chunk) => {
+    child.stdout?.on("data", chunk => {
       stdout += chunk.toString();
     });
 
-    child.stderr?.on("data", (chunk) => {
+    child.stderr?.on("data", chunk => {
       stderr += chunk.toString();
     });
 
-    child.on("error", (error) => {
+    child.on("error", error => {
       reject(
         new Error(
           `${command} tidak tersedia: ${error.message}`
@@ -127,18 +156,16 @@ function run(command, args) {
       );
     });
 
-    child.on("close", (code) => {
+    child.on("close", code => {
       if (code === 0) {
         resolve({
           stdout,
-          stderr,
+          stderr
         });
       } else {
         reject(
           new Error(
-            `${command} berhenti dengan kode ${code}: ${stderr.slice(
-              -4000
-            )}`
+            `${command} berhenti dengan kode ${code}: ${stderr.slice(-4000)}`
           )
         );
       }
@@ -174,34 +201,21 @@ async function setupCookies() {
 }
 
 /* =========================
-   YT-DLP BASE ARGS
+   YT-DLP
 ========================= */
 
 async function baseYtDlpArgs() {
   const args = [
     "--no-playlist",
     "--no-warnings",
-
-    /*
-     * YouTube sekarang membutuhkan JS runtime
-     * untuk beberapa extraction flow.
-     */
     "--js-runtimes",
     "node",
-
-    /*
-     * Ambil EJS dari GitHub.
-     */
     "--remote-components",
-    "ejs:github",
+    "ejs:github"
   ];
 
   const cookieFile = await setupCookies();
 
-  /*
-   * Jika cookies tersedia, gunakan player client
-   * yang menghindari masalah tv_downgraded.
-   */
   if (cookieFile) {
     args.push(
       "--cookies",
@@ -234,13 +248,13 @@ function publicVideoInfo(info) {
     ...new Set(
       formats
         .filter(
-          (f) =>
+          f =>
             f.vcodec &&
             f.vcodec !== "none" &&
             Number.isFinite(f.height)
         )
-        .map((f) => f.height)
-    ),
+        .map(f => f.height)
+    )
   ]
     .sort((a, b) => b - a)
     .slice(0, 12);
@@ -253,10 +267,10 @@ function publicVideoInfo(info) {
     uploader: info.uploader || null,
     heights,
     hasAudio: formats.some(
-      (f) =>
+      f =>
         f.acodec &&
         f.acodec !== "none"
-    ),
+    )
   };
 }
 
@@ -268,10 +282,8 @@ async function removeFile(filePath) {
   if (!filePath) return;
 
   await fsp
-    .rm(filePath, {
-      force: true,
-    })
-    .catch((error) => {
+    .rm(filePath, { force: true })
+    .catch(error => {
       console.error(
         "Gagal menghapus file:",
         error.message
@@ -298,7 +310,7 @@ async function inspectVideo(videoId) {
   const args = [
     ...baseArgs,
     "--dump-single-json",
-    youtubeUrl(videoId),
+    youtubeUrl(videoId)
   ];
 
   const { stdout } = await run(
@@ -338,43 +350,34 @@ async function createDownload(
       `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
       `bv*[height<=${height}]+ba`,
       `b[height<=${height}]`,
-      "b",
+      "b"
     ].join("/");
 
     const baseArgs = await baseYtDlpArgs();
 
     const args = [
       ...baseArgs,
-
       "--no-part",
       "--restrict-filenames",
-
       "--format",
       format,
-
       "--merge-output-format",
       "mp4",
-
       "--remux-video",
       "mp4",
-
       "--output",
       outputTemplate,
-
-      youtubeUrl(videoId),
+      youtubeUrl(videoId)
     ];
 
-    await run(
-      "yt-dlp",
-      args
-    );
+    await run("yt-dlp", args);
 
     const candidates =
       await fsp.readdir(tempDir);
 
     const generatedName =
       candidates.find(
-        (name) =>
+        name =>
           name.startsWith(`${jobId}.`) &&
           !name.endsWith(".part")
       );
@@ -403,6 +406,7 @@ async function createDownload(
       jobId,
       filePath
     );
+
   } catch (error) {
     job.status = "failed";
 
@@ -412,6 +416,7 @@ async function createDownload(
     console.error(
       `[${videoId}] ${error.message}`
     );
+
   } finally {
     activeDownloads -= 1;
   }
@@ -433,8 +438,7 @@ app.post(
 
     if (!videoId) {
       return res.status(400).json({
-        error:
-          "URL YouTube tidak valid.",
+        error: "URL YouTube tidak valid."
       });
     }
 
@@ -449,7 +453,7 @@ app.post(
       if (info.is_live) {
         return res.status(400).json({
           error:
-            "Siaran langsung yang belum selesai tidak didukung.",
+            "Siaran langsung yang belum selesai tidak didukung."
         });
       }
 
@@ -461,13 +465,14 @@ app.post(
         return res.status(413).json({
           error: `Durasi video melebihi batas ${Math.round(
             maxVideoDuration / 60
-          )} menit.`,
+          )} menit.`
         });
       }
 
       return res.json(
         publicVideoInfo(info)
       );
+
     } catch (error) {
       console.error(
         `ERROR [${videoId}]: ${error.message}`
@@ -475,7 +480,7 @@ app.post(
 
       return res.status(422).json({
         error:
-          "Informasi video tidak dapat diambil. Video mungkin privat, dibatasi, atau tidak tersedia.",
+          "Informasi video tidak dapat diambil. Video mungkin privat, dibatasi, atau tidak tersedia."
       });
     }
   }
@@ -494,7 +499,7 @@ app.post(
     ) {
       return res.status(429).json({
         error:
-          "Server sedang sibuk. Coba lagi setelah proses lain selesai.",
+          "Server sedang sibuk. Coba lagi setelah proses lain selesai."
       });
     }
 
@@ -515,7 +520,7 @@ app.post(
     ) {
       return res.status(400).json({
         error:
-          "ID video tidak valid.",
+          "ID video tidak valid."
       });
     }
 
@@ -526,7 +531,7 @@ app.post(
       status: "processing",
       videoId,
       createdAt: Date.now(),
-      filePath: null,
+      filePath: null
     });
 
     activeDownloads += 1;
@@ -538,13 +543,13 @@ app.post(
     );
 
     return res.status(202).json({
-      jobId,
+      jobId
     });
   }
 );
 
 /* =========================
-   API JOB STATUS
+   JOB STATUS
 ========================= */
 
 app.get(
@@ -558,7 +563,7 @@ app.get(
     if (!job) {
       return res.status(404).json({
         error:
-          "Proses tidak ditemukan atau file sudah dihapus.",
+          "Proses tidak ditemukan atau file sudah dihapus."
       });
     }
 
@@ -572,7 +577,7 @@ app.get(
       downloadUrl:
         job.status === "ready"
           ? `/api/jobs/${req.params.jobId}/file`
-          : null,
+          : null
     });
   }
 );
@@ -596,7 +601,7 @@ app.get(
     ) {
       return res.status(404).json({
         error:
-          "File belum siap atau sudah dihapus.",
+          "File belum siap atau sudah dihapus."
       });
     }
 
@@ -611,7 +616,7 @@ app.get(
 
       return res.status(410).json({
         error:
-          "File sudah kedaluwarsa.",
+          "File sudah kedaluwarsa."
       });
     }
 
@@ -623,14 +628,14 @@ app.get(
     res.download(
       job.filePath,
       "video.mp4",
-      async (error) => {
+      async error => {
         if (
           error &&
           !res.headersSent
         ) {
           res.status(500).json({
             error:
-              "Pengiriman file gagal.",
+              "Pengiriman file gagal."
           });
         }
 
@@ -647,13 +652,12 @@ app.get(
 );
 
 /* =========================
-   PERIODIC CLEANUP
+   CLEANUP
 ========================= */
 
 setInterval(
   async () => {
-    const now =
-      Date.now();
+    const now = Date.now();
 
     for (
       const [jobId, job]
@@ -681,14 +685,21 @@ setInterval(
 ).unref();
 
 /* =========================
-   START SERVER
+   START
 ========================= */
 
 async function start() {
   await fsp.mkdir(
     tempDir,
     {
-      recursive: true,
+      recursive: true
+    }
+  );
+
+  await fsp.mkdir(
+    publicDir,
+    {
+      recursive: true
     }
   );
 
@@ -703,9 +714,7 @@ async function start() {
   );
 }
 
-start().catch(
-  (error) => {
-    console.error(error);
-    process.exit(1);
-  }
-);
+start().catch(error => {
+  console.error(error);
+  process.exit(1);
+});
