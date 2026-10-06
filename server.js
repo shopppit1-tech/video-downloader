@@ -351,8 +351,6 @@ async function validateCookieFile(filePath) {
 
 /* =========================================================
    COOKIE
-   Render Secret File = READ ONLY.
-   Jadi Secret File SELALU disalin ke /tmp.
 ========================================================= */
 
 async function getCookieFile() {
@@ -688,14 +686,27 @@ async function inspectVideo(videoId) {
 
   const {
     stdout,
+    stderr,
   } = await run(
     "yt-dlp",
     args
   );
 
-  return JSON.parse(
-    stdout
-  );
+  const trimmedStdout = stdout.trim();
+
+  if (!trimmedStdout.startsWith("{")) {
+    throw new Error(
+      `Gagal mengurai metadata video. Output yt-dlp tidak valid: ${stderr.slice(-500) || trimmedStdout.slice(-500)}`
+    );
+  }
+
+  try {
+    return JSON.parse(trimmedStdout);
+  } catch (parseError) {
+    throw new Error(
+      `Format JSON metadata rusak: ${parseError.message}`
+    );
+  }
 }
 
 /* =========================================================
