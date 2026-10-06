@@ -1,7 +1,7 @@
 {
-  "name": "Video Fetch - Pengunduh Video",
+  "name": "Video Fetch",
   "short_name": "Video Fetch",
-  "description": "Pengunduh video MP4 dengan cepat dan mudah.",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -9,10 +9,6 @@
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "lang": "id",
-  "categories": [
-    "video",
-    "utilities"
-  ],
   "icons": [
     {
       "src": "/icon-192.png",
