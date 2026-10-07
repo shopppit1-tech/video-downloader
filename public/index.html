@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5350569631434952"
+  <script async src="https://pagead2.googlesyndication.com/pagead/js?client=ca-pub-5350569631434952"
      crossorigin="anonymous"></script>
   <meta charset="utf-8">
 
@@ -562,6 +562,32 @@
       background: rgba(37,99,235,.1);
       border: 1px solid rgba(96,165,250,.18);
       color: #7db9ff;
+    }
+
+    /* =====================================================
+       SPINNER LOADING
+    ====================================================== */
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(125,185,255,.30);
+      border-top-color: #7db9ff;
+      border-radius: 50%;
+      animation: spinnerRotate .8s linear infinite;
+      vertical-align: -3px;
+      margin-right: 7px;
+    }
+
+    @keyframes spinnerRotate {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     /* =====================================================
@@ -1504,8 +1530,21 @@ function showStatus(
   statusBox.className =
     "status " + type;
 
-  statusBox.textContent =
-    message;
+  if (
+    type ===
+    "loading"
+  ) {
+
+    statusBox.innerHTML =
+      '<span class="spinner"></span> ' +
+      message;
+
+  } else {
+
+    statusBox.textContent =
+      message;
+
+  }
 
 }
 
@@ -2329,14 +2368,9 @@ downloadBtn.addEventListener(
 
 
       showStatus(
-  "Sedang memproses download...",
-  "loading"
-);
-
-jobText.innerHTML =
-  '<span class="spinner"></span> Sedang memproses download...';
-       
-     
+        "Sedang memproses download...",
+        "loading"
+      );
 
 
       /* =================================================
@@ -2538,6 +2572,7 @@ if (
 
 </body>
 </html>
+
 <footer style="
   text-align:center;
   padding:30px 15px 20px;
