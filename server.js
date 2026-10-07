@@ -1467,3 +1467,559 @@ start().catch(
 
   }
 );
+const express = require("express");
+const rateLimit = require("express-rate-limit");
+const { spawn } = require("node:child_process");
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const fsp = require("node:fs/promises");
+const path = require("node:path");
+require("dotenv").config();
+
+const app = express();
+const port = Number(process.env.PORT || 3000);
+
+const fileTtlMs =
+  Number(process.env.FILE_TTL_MINUTES || 30) * 60 * 1000;
+
+const maxConcurrentDownloads =
+  Number(process.env.MAX_CONCURRENT_DOWNLOADS || 2);
+
+const maxVideoDuration =
+  Number(process.env.MAX_VIDEO_DURATION_SECONDS || 7200);
+
+const tempDir = path.join(__dirname, "temp");
+const publicDir = path.join(__dirname, "public");
+
+const jobs = new Map();
+let activeDownloads = 0;
+
+app.disable("x-powered-by");
+app.set("trust proxy", 1);
+
+app.use(express.json({ limit: "10kb" }));
+
+/* =========================
+   STATIC / PWA
+========================= */
+
+app.use(
+  express.static(publicDir, {
+    index: "index.html",
+    extensions: ["html"],
+  })
+);
+
+app.get("/manifest.json", (req, res) => {
+  res.sendFile(path.join(publicDir, "manifest.json"));
+});
+
+app.get("/sw.js", (req, res) => {
+  res.setHeader(
+    "Content-Type",
+    "application/javascript; charset=utf-8"
+  );
+
+  res.setHeader(
+    "Cache-Control",
+    "no-cache, no-store, must-revalidate"
+  );
+
+  res.sendFile(path.join(publicDir, "sw.js"));
+});
+
+app.get("/icon-192.png", (req, res) => {
+  res.sendFile(path.join(publicDir, "icon-192.png"));
+});
+
+app.get("/icon-512.png", (req, res) => {
+  res.sendFile(path.join(publicDir, "icon-512.png"));
+});
+
+/* =========================
+   RATE LIMIT
+========================= */
+
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
+
+/* =========================
+   YOUTUBE URL
+========================= */
+
+function extractYouTubeId(input) {
+  let url;
+
+  try {
+    url = new URL(input);
+  } catch {
+    return null;
+  }
+
+  const host = url.hostname
+    .toLowerCase()
+    .replace(/^www\./, "");
+
+  if (host === "youtu.be") {
+    const id = url.pathname.slice(1);
+    return /^[\w-]{11}$/.test(id) ? id : null;
+  }
+
+  if (
+    ![
+      "youtube.com",
+      "m.youtube.com",
+      "music.youtube.com",
+    ].includes(host)
+  ) {
+    return null;
+  }
+
+  if (url.pathname === "/watch") {
+    const id = url.searchParams.get("v");
+
+    return id && /^[\w-]{11}$/.test(id)
+      ? id
+      : null;
+  }
+
+  const match = url.pathname.match(
+    /^\/(?:shorts|embed|live)\/([\w-]{11})(?:\/|$)/
+  );
+
+  return match ? match[1] : null;
+}
+
+function youtubeUrl(videoId) {
+  return `https://www.youtube.com/watch?v=${videoId}`;
+}
+
+/* =========================
+   COMMAND RUNNER
+========================= */
+
+function run(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      windowsHide: true,
+      env: {
+        ...process.env,
+      },
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout?.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr?.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on("error", (error) => {
+      reject(
+        new Error(
+          `${command} tidak tersedia: ${error.message}`
+        )
+      );
+    });
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve({
+          stdout,
+          stderr,
+        });
+      } else {
+        reject(
+          new Error(
+            `${command} berhenti dengan kode ${code}: ${stderr.slice(
+              -5000
+            )}`
+          )
+        );
+      }
+    });
+  });
+}
+
+/* =========================
+   COOKIES
+========================= */
+
+async function setupCookies() {
+  const cookies = String(
+    process.env.YOUTUBE_COOKIES || ""
+  ).trim();
+
+  if (!cookies) {
+    console.log(
+      "YOUTUBE_COOKIES tidak tersedia."
+    );
+
+    return null;
+  }
+
+  const cookieFile = path.join(
+    tempDir,
+    "youtube-cookies.txt"
+  );
+
+  await fsp.writeFile(
+    cookieFile,
+    cookies.endsWith("\n")
+      ? cookies
+      : `${cookies}\n`,
+    "utf8"
+  );
+
+  console.log(
+    "YOUTUBE_COOKIES aktif."
+  );
+
+  return cookieFile;
+}
+
+/* =========================
+   YT-DLP ARGS
+========================= */
+
+async function baseYtDlpArgs() {
+  const args = [
+    "--no-playlist",
+    "--no-warnings",
+
+    "--js-runtimes",
+    "node",
+
+    "--remote-components",
+    "ejs:github",
+
+    "--no-check-certificates",
+
+    "--geo-bypass",
+
+    "--newline",
+  ];
+
+  const cookieFile =
+    await setupCookies();
+
+  if (cookieFile) {
+    args.push(
+      "--cookies",
+      cookieFile,
+
+      "--extractor-args",
+      "youtube:player_client=default,web_embedded"
+    );
+  } else {
+    args.push(
+      "--extractor-args",
+      "youtube:player_client=tv,web_embedded"
+    );
+  }
+
+  if (process.env.YOUTUBE_USER_AGENT) {
+    args.push(
+      "--user-agent",
+      process.env.YOUTUBE_USER_AGENT
+    );
+  }
+
+  return args;
+}
+
+/* =========================
+   PUBLIC VIDEO INFO
+========================= */
+
+function publicVideoInfo(info) {
+  const formats = Array.isArray(info.formats)
+    ? info.formats
+    : [];
+
+  const heights = [
+    ...new Set(
+      formats
+        .filter(
+          (f) =>
+            f.vcodec &&
+            f.vcodec !== "none" &&
+            Number.isFinite(f.height)
+        )
+        .map((f) => f.height)
+    ),
+  ]
+    .sort((a, b) => b - a)
+    .slice(0, 12);
+
+  return {
+    id: info.id,
+    title: info.title || "video",
+    thumbnail: info.thumbnail || null,
+    duration: Number(info.duration || 0),
+    uploader: info.uploader || null,
+    heights,
+    hasAudio: formats.some(
+      (f) =>
+        f.acodec &&
+        f.acodec !== "none"
+    ),
+  };
+}
+
+/* =========================
+   FILE CLEANUP
+========================= */
+
+async function removeFile(filePath) {
+  if (!filePath) return;
+
+  await fsp
+    .rm(filePath, {
+      force: true,
+    })
+    .catch((error) => {
+      console.error(
+        "Gagal menghapus file:",
+        error.message
+      );
+    });
+}
+
+function scheduleDeletion(
+  jobId,
+  filePath
+) {
+  const timer = setTimeout(
+    async () => {
+      await removeFile(filePath);
+      jobs.delete(jobId);
+    },
+    fileTtlMs
+  );
+
+  timer.unref();
+}
+
+/* =========================
+   VIDEO INFO
+========================= */
+
+async function inspectVideo(videoId) {
+  const baseArgs =
+    await baseYtDlpArgs();
+
+  const args = [
+    ...baseArgs,
+
+    "--dump-single-json",
+
+    "--skip-download",
+
+    youtubeUrl(videoId),
+  ];
+
+  const { stdout } =
+    await run("yt-dlp", args);
+
+  return JSON.parse(stdout);
+}
+
+/* =========================
+   DOWNLOAD
+========================= */
+
+async function createDownload(
+  jobId,
+  videoId,
+  requestedHeight
+) {
+  const job = jobs.get(jobId);
+
+  try {
+    const height = Math.min(
+      Math.max(
+        Number(requestedHeight) || 1080,
+        144
+      ),
+      2160
+    );
+
+    const outputTemplate =
+      path.join(
+        tempDir,
+        `${jobId}.%(ext)s`
+      );
+
+    const format = [
+      `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
+      `bv*[height<=${height}]+ba`,
+      `b[height<=${height}]`,
+      "b",
+    ].join("/");
+
+    const baseArgs =
+      await baseYtDlpArgs();
+
+    const args = [
+      ...baseArgs,
+
+      "--no-part",
+
+      "--restrict-filenames",
+
+      "--format",
+      format,
+
+      "--merge-output-format",
+      "mp4",
+
+      "--remux-video",
+      "mp4",
+
+      "--output",
+      outputTemplate,
+
+      youtubeUrl(videoId),
+    ];
+
+    await run(
+      "yt-dlp",
+      args
+    );
+
+    const candidates =
+      await fsp.readdir(tempDir);
+
+    const generatedName =
+      candidates.find(
+        (name) =>
+          name.startsWith(
+            `${jobId}.`
+          ) &&
+          !name.endsWith(".part") &&
+          !name.endsWith(".ytdl")
+      );
+
+    if (!generatedName) {
+      throw new Error(
+        "File hasil pemrosesan tidak ditemukan."
+      );
+    }
+
+    const filePath =
+      path.join(
+        tempDir,
+        generatedName
+      );
+
+    const stats =
+      await fsp.stat(filePath);
+
+    job.status = "ready";
+    job.filePath = filePath;
+    job.size = stats.size;
+    job.expiresAt =
+      Date.now() + fileTtlMs;
+
+    scheduleDeletion(
+      jobId,
+      filePath
+    );
+  } catch (error) {
+    job.status = "failed";
+
+    job.error =
+      "Video tidak dapat diproses. YouTube mungkin meminta autentikasi atau memblokir server.";
+
+    console.error(
+      `[${videoId}] ${error.message}`
+    );
+  } finally {
+    activeDownloads -= 1;
+  }
+}
+
+/* =========================
+   API INFO
+========================= */
+
+app.post(
+  "/api/info",
+  async (req, res) => {
+    const videoId =
+      extractYouTubeId(
+        String(
+          req.body?.url || ""
+        ).trim()
+      );
+
+    if (!videoId) {
+      return res.status(400).json({
+        error:
+          "URL YouTube tidak valid.",
+      });
+    }
+
+    console.log(
+      `REQUEST: ${videoId}`
+    );
+
+    try {
+      const info =
+        await inspectVideo(videoId);
+
+      if (info.is_live) {
+        return res.status(400).json({
+          error:
+            "Siaran langsung yang belum selesai tidak didukung.",
+        });
+      }
+
+      if (
+        info.duration &&
+        info.duration >
+          maxVideoDuration
+      ) {
+        return res.status(413).json({
+          error: `Durasi video melebihi batas ${Math.round(
+            maxVideoDuration / 60
+          )} menit.`,
+        });
+      }
+
+      return res.json(
+        publicVideoInfo(info)
+      );
+    } catch (error) {
+      console.error(
+        `ERROR [${videoId}]: ${error.message}`
+      );
+
+      return res.status(422).json({
+        error:
+          "Informasi video tidak dapat diambil. YouTube mungkin memblokir server atau meminta autentikasi.",
+      });
+    }
+  }
+);
+
+/* =========================
+   API DOWNLOAD
+========================= */
+
+app.post(
+  "/api/download",
+  (req, res) => {
+    
