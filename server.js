@@ -1,280 +1,207 @@
 const express = require("express");
-const fsp = require("fs").promises;
-const path = require("path");
-const crypto = require("crypto");
-const { exec } = require("child_process");
-const util = require("util");
-const execPromise = util.promisify(exec);
+const rateLimit = require("express-rate-limit");
+const { spawn } = require("node:child_process");
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const fsp = require("node:fs/promises");
+const path = require("node:path");
+require("dotenv").config();
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-/* =========================
-   KONFIGURASI & STATE
-========================= */
-const PORT = process.env.PORT || 3000;
+const port = Number(process.env.PORT || 3000);
+const fileTtlMs = Number(process.env.FILE_TTL_MINUTES || 30) * 60 * 1000;
+const maxConcurrentDownloads = Number(process.env.MAX_CONCURRENT_DOWNLOADS || 2);
+const maxVideoDuration = Number(process.env.MAX_VIDEO_DURATION_SECONDS || 7200);
 const tempDir = path.join(__dirname, "temp");
-const fileTtlMs = 60 * 60 * 1000; // File dihapus otomatis setelah 1 jam
-const maxVideoDuration = 3600; // Batas durasi: 60 menit (dalam detik)
 const jobs = new Map();
-
 let activeDownloads = 0;
-const MAX_CONCURRENT_DOWNLOADS = 2; // Maksimal unduhan bersamaan
+
+app.disable("x-powered-by");
+app.use(express.json({ limit: "10kb" }));
+
+// Melayani file statis dari folder public jika ada
+const publicPath = path.join(__dirname, "public");
+app.use(express.static(publicPath));
+
+app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false }));
 
 /* =========================
-   HELPER / FUNGSI PENDUKUNG
+   HELPER FUNCTIONS
 ========================= */
 
-// Validasi URL sederhana
-function isValidUrl(urlStr) {
+// Validasi URL secara umum (Mendukung link apa saja)
+function isValidUrl(input) {
   try {
-    const parsed = new URL(urlStr);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
+    const url = new URL(input);
+    return ["http:", "https:"].includes(url.protocol);
   } catch {
     return false;
   }
 }
 
-// Inspeksi info video menggunakan yt-dlp CLI
-async function inspectVideo(url) {
-  // Option --dump-json mengambil metadata tanpa mengunduh file
-  const { stdout } = await execPromise(`yt-dlp --dump-json "${url}"`);
-  const info = JSON.parse(stdout);
+function run(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { windowsHide: true });
+    let stdout = ""; let stderr = "";
+    child.stdout?.on("data", (chunk) => { stdout += chunk.toString(); });
+    child.stderr?.on("data", (chunk) => { stderr += chunk.toString(); });
+    child.on("error", (error) => reject(new Error(`${command} tidak tersedia: ${error.message}`)));
+    child.on("close", (code) => code === 0 ? resolve({ stdout, stderr }) : reject(new Error(`${command} berhenti dengan kode ${code}: ${stderr.slice(-2000)}`)));
+  });
+}
+
+function publicVideoInfo(info) {
+  const formats = Array.isArray(info.formats) ? info.formats : [];
+  const heights = [...new Set(formats.filter((f) => f.vcodec && f.vcodec !== "none" && Number.isFinite(f.height)).map((f) => f.height))].sort((a, b) => b - a).slice(0, 12);
   return {
-    title: info.title || "Untitled Video",
-    duration: info.duration || 0,
-    is_live: info.is_live || false,
-    extractor: info.extractor_key || "Unknown Platform",
+    id: info.id,
+    title: info.title || "video",
+    thumbnail: info.thumbnail || null,
+    duration: Number(info.duration || 0),
+    uploader: info.uploader || info.extractor_key || null,
+    heights,
+    hasAudio: formats.some((f) => f.acodec && f.acodec !== "none")
   };
 }
 
-// Jadwalkan penghapusan file dari penyimpanan & memori
-function scheduleDeletion(jobId, filePath) {
-  setTimeout(async () => {
-    try {
-      await fsp.unlink(filePath);
-      console.log(`[CLEANUP] File untuk Job ${jobId} berhasil dihapus.`);
-    } catch (e) {
-      // Abaikan jika file sudah dihapus manual
-    }
-    jobs.delete(jobId);
-  }, fileTtlMs);
+async function removeFile(filePath) { 
+  if (filePath) await fsp.rm(filePath, { force: true }).catch((error) => console.error("Gagal menghapus file:", error.message)); 
 }
 
-/* =========================
-   PEMROSES ANTREAN (QUEUE)
-========================= */
+function scheduleDeletion(jobId, filePath) {
+  const timer = setTimeout(async () => { await removeFile(filePath); jobs.delete(jobId); }, fileTtlMs);
+  timer.unref();
+}
 
-async function processJob(jobId) {
+async function inspectVideo(targetUrl) {
+  const { stdout } = await run("yt-dlp", ["--dump-single-json", "--no-playlist", "--no-warnings", targetUrl]);
+  return JSON.parse(stdout);
+}
+
+async function createDownload(jobId, targetUrl, requestedHeight) {
   const job = jobs.get(jobId);
-  if (!job) return;
-
-  activeDownloads += 1;
-  job.status = "processing";
-
   try {
-    await fsp.mkdir(tempDir, { recursive: true });
-    const outputPattern = path.join(tempDir, `${jobId}.%(ext)s`);
-
-    // Perintah yt-dlp sesuai format yang dipilih (MP4 / MP3)
-    let command = `yt-dlp -o "${outputPattern}" "${job.url}"`;
-    if (job.format === "mp3") {
-      command += ` -x --audio-format mp3`;
-    } else {
-      command += ` -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"`;
-    }
-
-    await execPromise(command);
-
-    // Cari file hasil ekstraksi di folder temp
-    const files = await fsp.readdir(tempDir);
-    const downloadedFile = files.find((f) => f.startsWith(jobId));
-
-    if (!downloadedFile) {
-      throw new Error("File hasil unduhan tidak ditemukan di server.");
-    }
-
-    const filePath = path.join(tempDir, downloadedFile);
+    const height = Math.min(Math.max(Number(requestedHeight) || 1080, 144), 2160);
+    const outputTemplate = path.join(tempDir, `${jobId}.%(ext)s`);
+    const format = [`bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`, `bv*[height<=${height}]+ba`, `b[height<=${height}]`, "b"].join("/");
+    
+    await run("yt-dlp", ["--no-playlist", "--no-part", "--restrict-filenames", "--format", format, "--merge-output-format", "mp4", "--remux-video", "mp4", "--output", outputTemplate, targetUrl]);
+    
+    const candidates = await fsp.readdir(tempDir);
+    const generatedName = candidates.find((name) => name.startsWith(`${jobId}.`) && !name.endsWith(".part"));
+    if (!generatedName) throw new Error("File hasil pemrosesan tidak ditemukan.");
+    
+    const filePath = path.join(tempDir, generatedName);
     const stats = await fsp.stat(filePath);
-
-    job.status = "ready";
-    job.filePath = filePath;
-    job.size = stats.size;
+    
+    job.status = "ready"; 
+    job.filePath = filePath; 
+    job.size = stats.size; 
     job.expiresAt = Date.now() + fileTtlMs;
-
     scheduleDeletion(jobId, filePath);
   } catch (error) {
-    job.status = "failed";
-    job.error = "Gagal memproses video. URL mungkin tidak didukung, bersifat privat, atau server diblokir.";
-    console.error(`[Job ${jobId}] Error: ${error.message}`);
-  } finally {
-    activeDownloads -= 1;
-    processQueue(); // Jalankan antrean berikutnya
-  }
-}
-
-function processQueue() {
-  if (activeDownloads >= MAX_CONCURRENT_DOWNLOADS) return;
-
-  for (const [jobId, job] of jobs.entries()) {
-    if (job.status === "queued") {
-      processJob(jobId);
-      break;
-    }
+    job.status = "failed"; 
+    job.error = "Video tidak dapat diproses. Pastikan URL dapat diakses dan yt-dlp/FFmpeg terpasang."; 
+    console.error(error.message);
+  } finally { 
+    activeDownloads -= 1; 
   }
 }
 
 /* =========================
-   HALAMAN UTAMA (UI)
+   ROUTES & ENDPOINTS
 ========================= */
 
+// Rute Halaman Utama (Mencegah eror "Cannot GET /")
 app.get("/", (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="id">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Universal Video Downloader API</title>
-      <style>
-        body { font-family: sans-serif; background: #f4f6f8; margin: 0; padding: 40px 20px; text-align: center; }
-        .card { background: white; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { color: #333; margin-top: 0; }
-        p { color: #666; line-height: 1.6; }
-        .endpoint { background: #eef2f5; padding: 8px 12px; border-radius: 6px; font-family: monospace; display: inline-block; }
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <h1>Server Downloader Aktif 🚀</h1>
-        <p>Backend API pengunduh video & audio otomatis siap digunakan.</p>
-        <p>Mendukung link dari <strong>YouTube, Facebook, Instagram, TikTok, Twitter/X</strong>, dan lainnya.</p>
-        <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
-        <p><strong>Endpoint Utama:</strong></p>
-        <p><span class="endpoint">POST /api/info</span> - Cek metadata video</p><br>
-        <p><span class="endpoint">POST /api/download</span> - Masukkan tugas ke antrean</p><br>
-        <p><span class="endpoint">GET /api/status/:jobId</span> - Cek status unduhan</p>
-      </div>
-    </body>
-    </html>
-  `);
+  const indexPath = path.join(publicPath, "index.html");
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  res.send("<h1>Universal Video Downloader API</h1><p>Server aktif. Gunakan endpoint API untuk memproses unduhan.</p>");
 });
 
-/* =========================
-   API ENDPOINTS
-========================= */
-
-// 1. Cek Informasi Video
+// Endpoint untuk cek info/metadata video
 app.post("/api/info", async (req, res) => {
   const url = String(req.body?.url || "").trim();
-
-  if (!isValidUrl(url)) {
-    return res.status(400).json({ error: "URL tidak valid. Masukkan link yang benar." });
-  }
-
-  console.log(`[INFO REQUEST] ${url}`);
-
+  if (!isValidUrl(url)) return res.status(400).json({ error: "URL tidak valid." });
+  
   try {
     const info = await inspectVideo(url);
-
-    if (info.is_live) {
-      return res.status(400).json({
-        error: "Siaran langsung (Live Stream) yang belum selesai tidak dapat diunduh.",
-      });
-    }
-
-    if (info.duration && info.duration > maxVideoDuration) {
-      return res.status(413).json({
-        error: `Durasi video melebihi batas maksimal ${Math.round(maxVideoDuration / 60)} menit.`,
-      });
-    }
-
-    return res.json({
-      title: info.title,
-      duration: info.duration,
-      platform: info.extractor,
-    });
-  } catch (error) {
-    console.error(`[INFO ERROR]: ${error.message}`);
-    return res.status(422).json({
-      error: "Informasi video tidak dapat diambil. Link mungkin privat atau tidak didukung.",
-    });
+    if (info.is_live) return res.status(400).json({ error: "Siaran langsung yang belum selesai tidak didukung." });
+    if (info.duration && info.duration > maxVideoDuration) return res.status(413).json({ error: `Durasi video melebihi batas ${Math.round(maxVideoDuration / 60)} menit.` });
+    
+    return res.json(publicVideoInfo(info));
+  } catch (error) { 
+    console.error(error.message); 
+    return res.status(422).json({ error: "Informasi video tidak dapat diambil. Video mungkin privat, dibatasi, atau tidak tersedia." }); 
   }
 });
 
-// 2. Minta Unduhan Video/Audio
+// Endpoint untuk memulai unduhan (menerima `url` dan `height`)
 app.post("/api/download", (req, res) => {
+  if (activeDownloads >= maxConcurrentDownloads) return res.status(429).json({ error: "Server sedang sibuk. Coba lagi setelah proses lain selesai." });
+  
   const url = String(req.body?.url || "").trim();
-  const format = String(req.body?.format || "mp4").toLowerCase();
+  const height = Number(req.body?.height || 1080);
+  
+  if (!isValidUrl(url)) return res.status(400).json({ error: "URL tidak valid." });
+  
+  const jobId = crypto.randomUUID();
+  jobs.set(jobId, { status: "processing", url, createdAt: Date.now(), filePath: null });
+  
+  activeDownloads += 1; 
+  void createDownload(jobId, url, height);
+  
+  return res.status(202).json({ jobId });
+});
 
-  if (!isValidUrl(url)) {
-    return res.status(400).json({ error: "URL tidak valid." });
-  }
-
-  if (!["mp4", "mp3"].includes(format)) {
-    return res.status(400).json({ error: "Format tidak didukung. Gunakan 'mp4' atau 'mp3'." });
-  }
-
-  const jobId = crypto.randomBytes(16).toString("hex");
-
-  const job = {
-    id: jobId,
-    url,
-    format,
-    status: "queued",
-    createdAt: Date.now(),
-  };
-
-  jobs.set(jobId, job);
-  processQueue();
-
-  return res.status(202).json({
-    jobId,
-    status: job.status,
-    message: "Proses unduhan telah ditambahkan ke antrean.",
+app.get("/api/jobs/:jobId", (req, res) => {
+  const job = jobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: "Proses tidak ditemukan atau file sudah dihapus." });
+  
+  return res.json({ 
+    status: job.status, 
+    size: job.size || null, 
+    expiresAt: job.expiresAt || null, 
+    error: job.error || null, 
+    downloadUrl: job.status === "ready" ? `/api/jobs/${req.params.jobId}/file` : null 
   });
 });
 
-// 3. Cek Status Pekerjaan (Job)
-app.get("/api/status/:jobId", (req, res) => {
+app.get("/api/jobs/:jobId/file", async (req, res) => {
   const job = jobs.get(req.params.jobId);
-
-  if (!job) {
-    return res.status(404).json({ error: "Pekerjaan tidak ditemukan atau file sudah kadaluwarsa." });
-  }
-
-  return res.json({
-    status: job.status,
-    ...(job.status === "ready" && {
-      downloadUrl: `/api/file/${job.id}`,
-      size: job.size,
-      expiresAt: job.expiresAt,
-    }),
-    ...(job.status === "failed" && { error: job.error }),
+  if (!job || job.status !== "ready" || !job.filePath) return res.status(404).json({ error: "File belum siap atau sudah dihapus." });
+  if (!fs.existsSync(job.filePath)) { jobs.delete(req.params.jobId); return res.status(410).json({ error: "File sudah kedaluwarsa." }); }
+  
+  res.setHeader("Cache-Control", "private, no-store");
+  res.download(job.filePath, "video.mp4", async (error) => { 
+    if (error && !res.headersSent) res.status(500).json({ error: "Pengiriman file gagal." }); 
+    await removeFile(job.filePath); 
+    jobs.delete(req.params.jobId); 
   });
-});
-
-// 4. Unduh File Hasil Ekstraksi
-app.get("/api/file/:jobId", async (req, res) => {
-  const job = jobs.get(req.params.jobId);
-
-  if (!job || job.status !== "ready" || !job.filePath) {
-    return res.status(404).json({ error: "File belum siap atau tidak ditemukan." });
-  }
-
-  try {
-    await fsp.access(job.filePath);
-    return res.download(job.filePath);
-  } catch {
-    return res.status(404).json({ error: "File sudah dihapus dari server." });
-  }
 });
 
 /* =========================
-   MEMULAI SERVER
+   CLEANUP & START SERVER
 ========================= */
 
-app.listen(PORT, () => {
-  console.log(`Server downloader berjalan di http://localhost:${PORT}`);
+setInterval(async () => { 
+  const now = Date.now(); 
+  for (const [jobId, job] of jobs) {
+    if (now - job.createdAt > fileTtlMs || (job.expiresAt && now > job.expiresAt)) { 
+      await removeFile(job.filePath); 
+      jobs.delete(jobId); 
+    } 
+  }
+}, 5 * 60 * 1000).unref();
+
+async function start() { 
+  await fsp.mkdir(tempDir, { recursive: true }); 
+  app.listen(port, "0.0.0.0", () => console.log(`Server aktif di http://localhost:${port}`)); 
+}
+
+start().catch((error) => { 
+  console.error(error); 
+  process.exit(1); 
 });
