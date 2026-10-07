@@ -3,6 +3,16 @@
 <head>
   <script async src="https://pagead2.googlesyndication.com/pagead/js?client=ca-pub-5350569631434952"
      crossorigin="anonymous"></script>
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-WN3215PH2F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag("js", new Date());
+    gtag("config", "G-WN3215PH2F");
+  </script>
+
   <meta charset="utf-8">
 
   <meta
@@ -40,7 +50,7 @@
     }
 
     html {
-      scroll-behavior: smooth;
+      scroll-behavior: auto;
     }
 
     body {
@@ -66,32 +76,37 @@
         );
       min-height: 100vh;
       overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
     }
 
     body::before {
       content: "";
       position: fixed;
-      width: 420px;
-      height: 420px;
-      left: -240px;
+      width: 260px;
+      height: 260px;
+      left: -150px;
       top: 300px;
       border-radius: 50%;
-      background: rgba(21,94,255,.16);
-      filter: blur(80px);
+      background: rgba(21,94,255,.10);
+      filter: blur(45px);
       pointer-events: none;
+      will-change: transform;
+      transform: translateZ(0);
     }
 
     body::after {
       content: "";
       position: fixed;
-      width: 380px;
-      height: 380px;
-      right: -230px;
+      width: 240px;
+      height: 240px;
+      right: -150px;
       bottom: 100px;
       border-radius: 50%;
-      background: rgba(104,45,255,.15);
-      filter: blur(90px);
+      background: rgba(104,45,255,.09);
+      filter: blur(45px);
       pointer-events: none;
+      will-change: transform;
+      transform: translateZ(0);
     }
 
     .page {
@@ -101,6 +116,7 @@
       padding: 18px 18px 60px;
       position: relative;
       z-index: 1;
+      transform: translateZ(0);
     }
 
     /* =====================================================
@@ -119,7 +135,7 @@
           rgba(238,245,255,.97)
         );
       box-shadow:
-        0 15px 45px rgba(0,0,0,.28);
+        0 8px 25px rgba(0,0,0,.20);
       overflow: hidden;
       display: flex;
       align-items: center;
@@ -208,7 +224,7 @@
       font-weight: 900;
       cursor: pointer;
       box-shadow:
-        0 10px 30px rgba(25,110,255,.25);
+        0 8px 22px rgba(21,108,255,.22);
       transition:
         transform .2s,
         box-shadow .2s;
@@ -319,7 +335,6 @@
       border: 1px solid rgba(137,165,224,.15);
       font-weight: 800;
       font-size: 14px;
-      backdrop-filter: blur(12px);
     }
 
     /* =====================================================
@@ -330,6 +345,7 @@
       position: relative;
       padding: 4px 0 30px;
       min-height: 260px;
+      transform: translateZ(0);
     }
 
     .hero-content {
@@ -424,14 +440,14 @@
       background:
         linear-gradient(
           145deg,
-          rgba(17,35,70,.92),
-          rgba(7,18,40,.96)
+          rgba(17,35,70,.96),
+          rgba(7,18,40,.98)
         );
       border: 1px solid rgba(109,147,214,.2);
       box-shadow:
-        0 30px 90px rgba(0,0,0,.4),
+        0 20px 55px rgba(0,0,0,.32),
         inset 0 1px rgba(255,255,255,.05);
-      backdrop-filter: blur(20px);
+      transform: translateZ(0);
     }
 
     /* =====================================================
@@ -511,7 +527,7 @@
       font-weight: 900;
       cursor: pointer;
       box-shadow:
-        0 12px 35px rgba(22,112,255,.3);
+        0 8px 22px rgba(21,108,255,.22);
       transition:
         transform .2s,
         box-shadow .2s;
@@ -565,7 +581,7 @@
     }
 
     /* =====================================================
-       SPINNER LOADING
+       SPINNER
     ====================================================== */
 
     .spinner {
@@ -610,6 +626,7 @@
       aspect-ratio: 16 / 9;
       object-fit: cover;
       display: block;
+      content-visibility: auto;
     }
 
     /* =====================================================
@@ -706,7 +723,7 @@
       font-weight: 900;
       cursor: pointer;
       box-shadow:
-        0 13px 38px rgba(21,108,255,.34);
+        0 8px 22px rgba(21,108,255,.22);
       transition:
         transform .2s,
         box-shadow .2s;
@@ -746,6 +763,7 @@
       gap: 25px;
       margin: 40px 0 20px;
       text-align: center;
+      transform: translateZ(0);
     }
 
     .feature-icon {
@@ -808,6 +826,11 @@
 
     @media (max-width:760px) {
 
+      body::before,
+      body::after {
+        display: none;
+      }
+
       .page {
         padding: 12px 13px 45px;
       }
@@ -820,6 +843,8 @@
         height: 55px;
         margin-bottom: 25px;
         font-size: 15px;
+        box-shadow:
+          0 8px 22px rgba(21,108,255,.22);
       }
 
       .test-ad {
@@ -887,6 +912,9 @@
       .main-card {
         padding: 14px;
         border-radius: 23px;
+        box-shadow:
+          0 15px 35px rgba(0,0,0,.28),
+          inset 0 1px rgba(255,255,255,.05);
       }
 
       .input-row {
@@ -902,6 +930,8 @@
       #checkBtn {
         height: 60px;
         font-size: 16px;
+        box-shadow:
+          0 8px 22px rgba(21,108,255,.22);
       }
 
       .thumbnail-box {
@@ -915,12 +945,19 @@
       .download-btn {
         height: 62px;
         font-size: 18px;
+        box-shadow:
+          0 8px 22px rgba(21,108,255,.22);
       }
 
       .features {
         grid-template-columns: repeat(2,1fr);
         gap: 28px 10px;
         margin-top: 35px;
+      }
+
+      .ad-box {
+        box-shadow:
+          0 8px 25px rgba(0,0,0,.20);
       }
     }
 
@@ -947,12 +984,7 @@
 
 <main class="page">
 
-  <!-- =================================================
-       IKLAN ATAS
-  ================================================== -->
-
   <div class="ad-box top-ad">
-
     <div class="test-ad">
 
       <div class="ad-left">
@@ -977,13 +1009,8 @@
       </div>
 
     </div>
-
   </div>
 
-
-  <!-- =================================================
-       INSTAL
-  ================================================== -->
 
   <button
     id="installBtn"
@@ -994,10 +1021,6 @@
     📲 Instal Video Fetch
   </button>
 
-
-  <!-- =================================================
-       BRAND
-  ================================================== -->
 
   <div class="brand-row">
 
@@ -1020,10 +1043,6 @@
   </div>
 
 
-  <!-- =================================================
-       PLATFORM
-  ================================================== -->
-
   <div class="platforms">
 
     <div class="platform">
@@ -1044,10 +1063,6 @@
 
   </div>
 
-
-  <!-- =================================================
-       HERO
-  ================================================== -->
 
   <section class="hero">
 
@@ -1083,13 +1098,7 @@
   </section>
 
 
-  <!-- =================================================
-       MAIN CARD
-  ================================================== -->
-
   <section class="main-card">
-
-    <!-- INPUT -->
 
     <div class="input-row">
 
@@ -1126,15 +1135,11 @@
     </div>
 
 
-    <!-- STATUS -->
-
     <div
       id="status"
       class="status"
     ></div>
 
-
-    <!-- THUMBNAIL -->
 
     <div
       id="thumbnailBox"
@@ -1149,8 +1154,6 @@
 
     </div>
 
-
-    <!-- VIDEO INFO -->
 
     <div
       id="videoInfo"
@@ -1175,8 +1178,6 @@
       ></div>
 
 
-      <!-- QUALITY -->
-
       <div class="quality-title">
         Pilih kualitas
       </div>
@@ -1192,8 +1193,6 @@
       </div>
 
 
-      <!-- DOWNLOAD -->
-
       <button
         id="downloadBtn"
         class="download-btn"
@@ -1202,8 +1201,6 @@
         ↓ &nbsp; Unduh MP4
       </button>
 
-
-      <!-- IKLAN BAWAH -->
 
       <div class="ad-box bottom-ad">
 
@@ -1237,8 +1234,6 @@
     </div>
 
 
-    <!-- INFO -->
-
     <div class="small">
       Mendukung video YouTube, Shorts, youtu.be,
       Facebook, Facebook Watch, Reel, dan tautan video publik.
@@ -1247,10 +1242,6 @@
 
   </section>
 
-
-  <!-- =================================================
-       FEATURES
-  ================================================== -->
 
   <section class="features">
 
@@ -1328,10 +1319,6 @@
   </section>
 
 
-  <!-- =================================================
-       FOOTER
-  ================================================== -->
-
   <footer>
     File sementara dapat dihapus setelah diunduh
     atau kedaluwarsa.<br>
@@ -1345,6 +1332,31 @@
 <script>
 
 "use strict";
+
+
+/* =====================================================
+   GOOGLE ANALYTICS
+===================================================== */
+
+function trackEvent(
+  eventName,
+  parameters = {}
+) {
+
+  if (
+    typeof gtag ===
+    "function"
+  ) {
+
+    gtag(
+      "event",
+      eventName,
+      parameters
+    );
+
+  }
+
+}
 
 
 /* =====================================================
@@ -1466,6 +1478,10 @@ window.addEventListener(
 
     deferredInstallPrompt =
       null;
+
+    trackEvent(
+      "pwa_install"
+    );
 
   }
 );
@@ -1599,10 +1615,6 @@ function parseVideoUrl(
       );
 
 
-  /* =================================================
-     YOUTUBE
-  ================================================== */
-
   if (
     host ===
     "youtu.be"
@@ -1703,10 +1715,6 @@ function parseVideoUrl(
 
   }
 
-
-  /* =================================================
-     FACEBOOK
-  ================================================== */
 
   if (
     host ===
@@ -1890,10 +1898,6 @@ function showVideo(
     "";
 
 
-  /* =================================================
-     THUMBNAIL
-  ================================================== */
-
   if (
     info.thumbnail
   ) {
@@ -1912,10 +1916,6 @@ function showVideo(
   }
 
 
-  /* =================================================
-     PLATFORM
-  ================================================== */
-
   if (
     currentPlatform ===
     "facebook"
@@ -1932,18 +1932,10 @@ function showVideo(
   }
 
 
-  /* =================================================
-     TITLE
-  ================================================== */
-
   videoTitle.textContent =
     info.title ||
     "Video";
 
-
-  /* =================================================
-     META
-  ================================================== */
 
   const meta = [];
 
@@ -1977,10 +1969,6 @@ function showVideo(
   videoMeta.textContent =
     meta.join(" · ");
 
-
-  /* =================================================
-     QUALITY
-  ================================================== */
 
   quality.innerHTML =
     "";
@@ -2080,7 +2068,7 @@ function showVideo(
 
       thumbnailBox.scrollIntoView({
         behavior:
-          "smooth",
+          "auto",
 
         block:
           "start"
@@ -2202,6 +2190,15 @@ checkBtn.addEventListener(
       showVideo(
         data,
         parsed
+      );
+
+
+      trackEvent(
+        "video_check",
+        {
+          platform:
+            parsed.platform
+        }
       );
 
 
@@ -2367,15 +2364,23 @@ downloadBtn.addEventListener(
       }
 
 
+      trackEvent(
+        "download_start",
+        {
+          platform:
+            parsed.platform,
+
+          quality:
+            height
+        }
+      );
+
+
       showStatus(
         "Sedang memproses download...",
         "loading"
       );
 
-
-      /* =================================================
-         POLLING
-      ================================================== */
 
       for (
         let attempt = 0;
@@ -2432,6 +2437,18 @@ downloadBtn.addEventListener(
             );
 
           }
+
+
+          trackEvent(
+            "download_success",
+            {
+              platform:
+                parsed.platform,
+
+              quality:
+                height
+            }
+          );
 
 
           showStatus(
@@ -2584,24 +2601,29 @@ if (
 ">
 
   <div style="margin-bottom:10px;">
+
     <a href="/privacy.html" style="color:#9db2d5;text-decoration:none;margin:0 5px;">
       Privacy Policy
     </a>
+
     <span>•</span>
 
     <a href="/terms.html" style="color:#9db2d5;text-decoration:none;margin:0 5px;">
       Terms & Conditions
     </a>
+
     <span>•</span>
 
     <a href="/disclaimer.html" style="color:#9db2d5;text-decoration:none;margin:0 5px;">
       Disclaimer
     </a>
+
     <span>•</span>
 
     <a href="/contact.html" style="color:#9db2d5;text-decoration:none;margin:0 5px;">
       Contact
     </a>
+
   </div>
 
   <div>
