@@ -12,7 +12,7 @@
 
   <meta
     name="description"
-    content="Video Fetch adalah pengunduh video MP4 yang cepat dan mudah digunakan."
+    content="Video Fetch adalah pengunduh video YouTube dan Facebook ke MP4."
   >
 
   <meta name="theme-color" content="#071329">
@@ -44,19 +44,16 @@
     body {
       margin: 0;
       color: #f8fbff;
-      font-family:
-        Arial,
-        Helvetica,
-        sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       background:
         radial-gradient(
           circle at 15% 10%,
-          rgba(39, 100, 255, .28),
+          rgba(39,100,255,.28),
           transparent 30%
         ),
         radial-gradient(
           circle at 85% 20%,
-          rgba(115, 55, 255, .22),
+          rgba(115,55,255,.22),
           transparent 30%
         ),
         linear-gradient(
@@ -77,7 +74,7 @@
       left: -240px;
       top: 300px;
       border-radius: 50%;
-      background: rgba(21, 94, 255, .16);
+      background: rgba(21,94,255,.16);
       filter: blur(80px);
       pointer-events: none;
     }
@@ -90,7 +87,7 @@
       right: -230px;
       bottom: 100px;
       border-radius: 50%;
-      background: rgba(104, 45, 255, .15);
+      background: rgba(104,45,255,.15);
       filter: blur(90px);
       pointer-events: none;
     }
@@ -104,7 +101,6 @@
       z-index: 1;
     }
 
-
     /* =====================================================
        IKLAN
     ====================================================== */
@@ -112,7 +108,7 @@
     .ad-box {
       width: 100%;
       min-height: 92px;
-      border: 1px solid rgba(160, 190, 255, .25);
+      border: 1px solid rgba(160,190,255,.25);
       border-radius: 16px;
       background:
         linear-gradient(
@@ -189,9 +185,8 @@
       box-shadow: 0 7px 20px rgba(23,105,224,.25);
     }
 
-
     /* =====================================================
-       TOMBOL INSTAL PWA
+       INSTAL PWA
     ====================================================== */
 
     .install-btn {
@@ -226,7 +221,6 @@
     .install-btn:active {
       transform: scale(.99);
     }
-
 
     /* =====================================================
        BRAND
@@ -304,30 +298,27 @@
       font-size: 18px;
     }
 
-
     /* =====================================================
-       TAGS
+       PLATFORM
     ====================================================== */
 
-    .tags {
+    .platforms {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
       margin: 12px 0 28px;
     }
 
-    .tag {
+    .platform {
       padding: 10px 17px;
       border-radius: 30px;
       color: #e8f0ff;
-      background:
-        rgba(83,111,169,.22);
+      background: rgba(83,111,169,.22);
       border: 1px solid rgba(137,165,224,.15);
       font-weight: 800;
       font-size: 14px;
       backdrop-filter: blur(12px);
     }
-
 
     /* =====================================================
        HERO
@@ -347,7 +338,7 @@
 
     h1 {
       margin: 0;
-      font-size: clamp(45px, 7vw, 78px);
+      font-size: clamp(45px,7vw,78px);
       line-height: .96;
       letter-spacing: -4px;
       font-weight: 950;
@@ -415,12 +406,10 @@
       right: 105px;
       top: 175px;
       transform: rotate(8deg);
-      background:
-        rgba(30,71,125,.7);
+      background: rgba(30,71,125,.7);
       border: 1px solid rgba(90,160,255,.5);
       color: #8ed8ff;
     }
-
 
     /* =====================================================
        MAIN CARD
@@ -443,9 +432,8 @@
       backdrop-filter: blur(20px);
     }
 
-
     /* =====================================================
-       INPUT AREA
+       INPUT
     ====================================================== */
 
     .input-row {
@@ -473,8 +461,7 @@
       height: 70px;
       border: 1px solid rgba(125,157,211,.35);
       border-radius: 18px;
-      background:
-        rgba(19,39,76,.8);
+      background: rgba(19,39,76,.8);
       color: white;
       padding: 0 52px;
       font-size: 17px;
@@ -540,7 +527,6 @@
       transform: none;
     }
 
-
     /* =====================================================
        STATUS
     ====================================================== */
@@ -576,7 +562,6 @@
       color: #7db9ff;
     }
 
-
     /* =====================================================
        THUMBNAIL
     ====================================================== */
@@ -598,7 +583,6 @@
       object-fit: cover;
       display: block;
     }
-
 
     /* =====================================================
        VIDEO INFO
@@ -624,6 +608,17 @@
       font-size: 14px;
     }
 
+    .source-badge {
+      display: inline-block;
+      margin-bottom: 12px;
+      padding: 7px 11px;
+      border-radius: 10px;
+      background: rgba(38,108,255,.16);
+      border: 1px solid rgba(86,160,255,.2);
+      color: #8ec7ff;
+      font-size: 12px;
+      font-weight: 900;
+    }
 
     /* =====================================================
        QUALITY
@@ -660,7 +655,6 @@
     select:focus {
       border-color: #168cff;
     }
-
 
     /* =====================================================
        DOWNLOAD
@@ -702,9 +696,8 @@
       transform: none;
     }
 
-
     /* =====================================================
-       BOTTOM INFO
+       INFO
     ====================================================== */
 
     .small {
@@ -715,15 +708,13 @@
       text-align: center;
     }
 
-
     /* =====================================================
        FEATURES
     ====================================================== */
 
     .features {
       display: grid;
-      grid-template-columns:
-        repeat(4, 1fr);
+      grid-template-columns: repeat(4,1fr);
       gap: 25px;
       margin: 40px 0 20px;
       text-align: center;
@@ -738,33 +729,24 @@
       align-items: center;
       justify-content: center;
       font-size: 25px;
-      background:
-        rgba(24,68,135,.45);
+      background: rgba(24,68,135,.45);
       border: 1px solid rgba(103,153,235,.16);
     }
 
     .feature:nth-child(1) .feature-icon {
       color: #48ffad;
-      box-shadow:
-        0 0 25px rgba(48,255,169,.14);
     }
 
     .feature:nth-child(2) .feature-icon {
       color: #b68cff;
-      box-shadow:
-        0 0 25px rgba(150,92,255,.14);
     }
 
     .feature:nth-child(3) .feature-icon {
       color: #ffbd49;
-      box-shadow:
-        0 0 25px rgba(255,190,60,.14);
     }
 
     .feature:nth-child(4) .feature-icon {
       color: #ff7295;
-      box-shadow:
-        0 0 25px rgba(255,80,125,.14);
     }
 
     .feature-title {
@@ -780,7 +762,6 @@
       line-height: 1.5;
     }
 
-
     /* =====================================================
        FOOTER
     ====================================================== */
@@ -793,12 +774,11 @@
       font-size: 13px;
     }
 
-
     /* =====================================================
        MOBILE
     ====================================================== */
 
-    @media (max-width: 760px) {
+    @media (max-width:760px) {
 
       .page {
         padding: 12px 13px 45px;
@@ -853,11 +833,11 @@
         font-size: 15px;
       }
 
-      .tags {
+      .platforms {
         margin-bottom: 24px;
       }
 
-      .tag {
+      .platform {
         padding: 8px 13px;
         font-size: 12px;
       }
@@ -910,16 +890,13 @@
       }
 
       .features {
-        grid-template-columns:
-          repeat(2, 1fr);
+        grid-template-columns: repeat(2,1fr);
         gap: 28px 10px;
         margin-top: 35px;
       }
-
     }
 
-
-    @media (max-width: 380px) {
+    @media (max-width:380px) {
 
       h1 {
         font-size: 43px;
@@ -929,1528 +906,1628 @@
         font-size: 27px;
       }
 
-      .test-ad-button {
+      .ad-button {
         display: none;
       }
 
     }
 
   </style>
-
 </head>
-
 
 <body>
 
-  <main class="page">
+<main class="page">
 
+  <!-- =================================================
+       IKLAN ATAS
+  ================================================== -->
 
-    <!-- =================================================
-         IKLAN ATAS
-    ================================================== -->
+  <div class="ad-box top-ad">
 
-    <div class="ad-box top-ad">
+    <div class="test-ad">
 
-      <div class="test-ad">
+      <div class="ad-left">
 
-        <div class="ad-left">
-
-          <div class="ad-label">
-            IKLAN
-          </div>
-
-          <div class="ad-brand">
-            <span class="ad-google">Google</span>
-            AdSense
-          </div>
-
-          <div class="ad-sub">
-            Ruang iklan banner responsif
-          </div>
-
+        <div class="ad-label">
+          IKLAN
         </div>
 
-        <div class="ad-button">
-          IKLAN TEST
+        <div class="ad-brand">
+          <span class="ad-google">Google</span>
+          AdSense
         </div>
 
+        <div class="ad-sub">
+          Ruang iklan banner responsif
+        </div>
+
+      </div>
+
+      <div class="ad-button">
+        IKLAN TEST
       </div>
 
     </div>
 
-
-    <!-- =================================================
-         TOMBOL INSTAL
-    ================================================== -->
-
-    <button
-      id="installBtn"
-      class="install-btn"
-      type="button"
-      style="display:none;"
-    >
-      📲 Instal Video Fetch
-    </button>
+  </div>
 
 
-    <!-- =================================================
-         BRAND
-    ================================================== -->
+  <!-- =================================================
+       INSTAL
+  ================================================== -->
 
-    <div class="brand-row">
+  <button
+    id="installBtn"
+    class="install-btn"
+    type="button"
+    style="display:none;"
+  >
+    📲 Instal Video Fetch
+  </button>
 
-      <div class="brand-icon">
-        ▶
+
+  <!-- =================================================
+       BRAND
+  ================================================== -->
+
+  <div class="brand-row">
+
+    <div class="brand-icon">
+      ▶
+    </div>
+
+    <div>
+
+      <div class="brand-name">
+        Video <span>Fetch</span>
       </div>
 
-      <div>
-
-        <div class="brand-name">
-          Video <span>Fetch</span>
-        </div>
-
-        <div class="brand-subtitle">
-          Pengunduh Video YouTube
-        </div>
-
+      <div class="brand-subtitle">
+        Pengunduh Video YouTube & Facebook
       </div>
 
     </div>
 
+  </div>
 
-    <!-- =================================================
-         TAGS
-    ================================================== -->
 
-    <div class="tags">
+  <!-- =================================================
+       PLATFORM
+  ================================================== -->
 
-      <div class="tag">
-        MP4
-      </div>
+  <div class="platforms">
 
-      <div class="tag">
-        Cepat
-      </div>
+    <div class="platform">
+      ▶ YouTube
+    </div>
 
-      <div class="tag">
-        Gratis
-      </div>
+    <div class="platform">
+      f Facebook
+    </div>
 
-      <div class="tag">
-        Tanpa Aplikasi
+    <div class="platform">
+      MP4
+    </div>
+
+    <div class="platform">
+      Gratis
+    </div>
+
+  </div>
+
+
+  <!-- =================================================
+       HERO
+  ================================================== -->
+
+  <section class="hero">
+
+    <div class="hero-content">
+
+      <h1>
+        Video favoritmu,<br>
+        <span class="gradient">
+          siap ditonton offline.
+        </span>
+      </h1>
+
+      <div class="intro">
+        Tempel URL YouTube atau Facebook,
+        pilih kualitas, dan dapatkan file MP4
+        dengan cepat dan mudah.
       </div>
 
     </div>
 
+    <div class="floating-badge badge-mp4">
+      MP4
+    </div>
 
-    <!-- =================================================
-         HERO
-    ================================================== -->
+    <div class="floating-badge badge-4k">
+      4K
+    </div>
 
-    <section class="hero">
+    <div class="floating-badge badge-hd">
+      HD
+    </div>
 
-      <div class="hero-content">
+  </section>
 
-        <h1>
-          Video favoritmu,<br>
-          <span class="gradient">
-            siap ditonton offline.
-          </span>
-        </h1>
 
-        <div class="intro">
-          Tempel URL YouTube, pilih kualitas,
-          dan dapatkan file MP4 dengan cepat
-          dan mudah digunakan.
+  <!-- =================================================
+       MAIN CARD
+  ================================================== -->
+
+  <section class="main-card">
+
+    <!-- INPUT -->
+
+    <div class="input-row">
+
+      <div class="input-wrap">
+
+        <div class="input-icon">
+          🔗
         </div>
 
-      </div>
-
-
-      <div class="floating-badge badge-mp4">
-        MP4
-      </div>
-
-      <div class="floating-badge badge-4k">
-        4K
-      </div>
-
-      <div class="floating-badge badge-hd">
-        HD
-      </div>
-
-    </section>
-
-
-    <!-- =================================================
-         MAIN CARD
-    ================================================== -->
-
-    <section class="main-card">
-
-
-      <!-- =================================================
-           INPUT
-      ================================================== -->
-
-      <div class="input-row">
-
-        <div class="input-wrap">
-
-          <div class="input-icon">
-            🔗
-          </div>
-
-          <input
-            id="url"
-            type="url"
-            inputmode="url"
-            autocomplete="off"
-            placeholder="https://youtube.com/watch?v=..."
-          >
-
-          <div
-            id="clearUrl"
-            class="clear-icon"
-          >
-            ×
-          </div>
-
-        </div>
-
-
-        <button
-          id="checkBtn"
-          type="button"
+        <input
+          id="url"
+          type="url"
+          inputmode="url"
+          autocomplete="off"
+          placeholder="Tempel link YouTube atau Facebook..."
         >
-          🔍 &nbsp; Periksa video
-        </button>
+
+        <div
+          id="clearUrl"
+          class="clear-icon"
+        >
+          ×
+        </div>
 
       </div>
 
+      <button
+        id="checkBtn"
+        type="button"
+      >
+        🔍 &nbsp; Periksa video
+      </button>
 
-      <!-- =================================================
-           STATUS
-      ================================================== -->
+    </div>
+
+
+    <!-- STATUS -->
+
+    <div
+      id="status"
+      class="status"
+    ></div>
+
+
+    <!-- THUMBNAIL -->
+
+    <div
+      id="thumbnailBox"
+      class="thumbnail-box"
+    >
+
+      <img
+        id="thumbnail"
+        class="thumbnail"
+        alt="Thumbnail video"
+      >
+
+    </div>
+
+
+    <!-- VIDEO INFO -->
+
+    <div
+      id="videoInfo"
+      class="video-info"
+    >
 
       <div
-        id="status"
-        class="status"
+        id="sourceBadge"
+        class="source-badge"
+      >
+        VIDEO
+      </div>
+
+      <h2
+        id="videoTitle"
+        class="title"
+      ></h2>
+
+      <div
+        id="videoMeta"
+        class="meta"
       ></div>
 
 
-      <!-- =================================================
-           THUMBNAIL
-           CUMA SATU
-      ================================================== -->
+      <!-- QUALITY -->
 
-      <div
-        id="thumbnailBox"
-        class="thumbnail-box"
-      >
+      <div class="quality-title">
+        Pilih kualitas
+      </div>
 
-        <img
-          id="thumbnail"
-          class="thumbnail"
-          alt="Thumbnail video"
-        >
+      <div class="quality">
+
+        <label for="quality">
+          Pilih kualitas
+        </label>
+
+        <select id="quality"></select>
 
       </div>
 
 
-      <!-- =================================================
-           VIDEO INFO
-      ================================================== -->
+      <!-- DOWNLOAD -->
 
-      <div
-        id="videoInfo"
-        class="video-info"
+      <button
+        id="downloadBtn"
+        class="download-btn"
+        type="button"
       >
-
-        <h2
-          id="videoTitle"
-          class="title"
-        ></h2>
-
-        <div
-          id="videoMeta"
-          class="meta"
-        ></div>
+        ↓ &nbsp; Unduh MP4
+      </button>
 
 
-        <!-- =================================================
-             QUALITY
-        ================================================== -->
+      <!-- IKLAN BAWAH -->
 
-        <div class="quality-title">
-          Pilih kualitas
-        </div>
+      <div class="ad-box bottom-ad">
 
-        <div class="quality">
+        <div class="test-ad">
 
-          <label for="quality">
-            Pilih kualitas
-          </label>
+          <div class="ad-left">
 
-          <select id="quality"></select>
-
-        </div>
-
-
-        <!-- =================================================
-             DOWNLOAD
-        ================================================== -->
-
-        <button
-          id="downloadBtn"
-          class="download-btn"
-          type="button"
-        >
-          ↓ &nbsp; Unduh MP4
-        </button>
-
-
-        <!-- =================================================
-             IKLAN BAWAH
-        ================================================== -->
-
-        <div class="ad-box bottom-ad">
-
-          <div class="test-ad">
-
-            <div class="ad-left">
-
-              <div class="ad-label">
-                IKLAN
-              </div>
-
-              <div class="ad-brand">
-                <span class="ad-google">Google</span>
-                AdSense
-              </div>
-
-              <div class="ad-sub">
-                Ruang iklan banner responsif
-              </div>
-
+            <div class="ad-label">
+              IKLAN
             </div>
 
-            <div class="ad-button">
-              IKLAN TEST
+            <div class="ad-brand">
+              <span class="ad-google">Google</span>
+              AdSense
+            </div>
+
+            <div class="ad-sub">
+              Ruang iklan banner responsif
             </div>
 
           </div>
 
-        </div>
+          <div class="ad-button">
+            IKLAN TEST
+          </div>
 
-
-      </div>
-
-
-      <!-- =================================================
-           SMALL INFO
-      ================================================== -->
-
-      <div class="small">
-        Mendukung video, Shorts, dan tautan youtu.be.
-        Siaran langsung yang sedang berlangsung
-        tidak didukung.
-      </div>
-
-
-    </section>
-
-
-    <!-- =================================================
-         FEATURES
-    ================================================== -->
-
-    <section class="features">
-
-
-      <div class="feature">
-
-        <div class="feature-icon">
-          ⚡
-        </div>
-
-        <div class="feature-title">
-          Cepat & Stabil
-        </div>
-
-        <div class="feature-text">
-          Proses download
-          lebih cepat
         </div>
 
       </div>
 
+    </div>
 
-      <div class="feature">
 
-        <div class="feature-icon">
-          🛡
-        </div>
+    <!-- INFO -->
 
-        <div class="feature-title">
-          Aman Digunakan
-        </div>
+    <div class="small">
+      Mendukung video YouTube, Shorts, youtu.be,
+      Facebook, Facebook Watch, Reel, dan tautan video publik.
+      Siaran langsung yang sedang berlangsung tidak didukung.
+    </div>
 
-        <div class="feature-text">
-          Tanpa instal
-          aplikasi
-        </div>
+  </section>
 
+
+  <!-- =================================================
+       FEATURES
+  ================================================== -->
+
+  <section class="features">
+
+    <div class="feature">
+
+      <div class="feature-icon">
+        ⚡
       </div>
 
-
-      <div class="feature">
-
-        <div class="feature-icon">
-          ▣
-        </div>
-
-        <div class="feature-title">
-          Semua Perangkat
-        </div>
-
-        <div class="feature-text">
-          HP, tablet
-          dan komputer
-        </div>
-
+      <div class="feature-title">
+        Cepat & Stabil
       </div>
 
-
-      <div class="feature">
-
-        <div class="feature-icon">
-          ♥
-        </div>
-
-        <div class="feature-title">
-          Mudah Digunakan
-        </div>
-
-        <div class="feature-text">
-          Tampilan sederhana
-          dan modern
-        </div>
-
+      <div class="feature-text">
+        Proses download
+        lebih cepat
       </div>
 
-
-    </section>
-
-
-    <!-- =================================================
-         FOOTER
-    ================================================== -->
-
-    <footer>
-      File sementara dapat dihapus setelah diunduh
-      atau kedaluwarsa.<br>
-      Pastikan penggunaan mematuhi ketentuan layanan
-      sumber video.
-    </footer>
+    </div>
 
 
-  </main>
+    <div class="feature">
+
+      <div class="feature-icon">
+        🛡
+      </div>
+
+      <div class="feature-title">
+        Aman Digunakan
+      </div>
+
+      <div class="feature-text">
+        Tanpa instal
+        aplikasi
+      </div>
+
+    </div>
 
 
-  <!-- =====================================================
-       JAVASCRIPT
-       FUNGSI DOWNLOAD TETAP
-  ====================================================== -->
+    <div class="feature">
 
-  <script>
+      <div class="feature-icon">
+        ▣
+      </div>
 
-    "use strict";
+      <div class="feature-title">
+        YouTube & Facebook
+      </div>
 
+      <div class="feature-text">
+        Satu alat untuk
+        dua platform
+      </div>
 
-    /* =====================================================
-       ELEMENT
-    ===================================================== */
-
-    const urlInput =
-      document.getElementById("url");
-
-    const checkBtn =
-      document.getElementById("checkBtn");
-
-    const downloadBtn =
-      document.getElementById("downloadBtn");
-
-    const quality =
-      document.getElementById("quality");
-
-    const statusBox =
-      document.getElementById("status");
-
-    const thumbnailBox =
-      document.getElementById("thumbnailBox");
-
-    const thumbnail =
-      document.getElementById("thumbnail");
-
-    const videoInfo =
-      document.getElementById("videoInfo");
-
-    const videoTitle =
-      document.getElementById("videoTitle");
-
-    const videoMeta =
-      document.getElementById("videoMeta");
-
-    const clearUrl =
-      document.getElementById("clearUrl");
-
-    const installBtn =
-      document.getElementById("installBtn");
+    </div>
 
 
-    /* =====================================================
-       STATE
-    ===================================================== */
+    <div class="feature">
 
-    let currentVideoId = "";
+      <div class="feature-icon">
+        ♥
+      </div>
 
-    let currentVideoUrl = "";
+      <div class="feature-title">
+        Mudah Digunakan
+      </div>
 
-    let deferredInstallPrompt = null;
+      <div class="feature-text">
+        Tampilan sederhana
+        dan modern
+      </div>
 
+    </div>
 
-    /* =====================================================
-       TOMBOL INSTAL PWA
-    ===================================================== */
-
-    window.addEventListener(
-      "beforeinstallprompt",
-      function (event) {
-
-        event.preventDefault();
-
-        deferredInstallPrompt =
-          event;
-
-        installBtn.style.display =
-          "block";
-
-      }
-    );
+  </section>
 
 
-    installBtn.addEventListener(
-      "click",
-      async function () {
+  <!-- =================================================
+       FOOTER
+  ================================================== -->
 
-        if (!deferredInstallPrompt) {
-          return;
-        }
+  <footer>
+    File sementara dapat dihapus setelah diunduh
+    atau kedaluwarsa.<br>
+    Pastikan penggunaan mematuhi ketentuan layanan
+    sumber video.
+  </footer>
 
-        deferredInstallPrompt.prompt();
-
-        const result =
-          await deferredInstallPrompt.userChoice;
-
-        if (
-          result.outcome ===
-          "accepted"
-        ) {
-
-          installBtn.textContent =
-            "✅ Video Fetch sedang dipasang...";
-
-        }
-
-        deferredInstallPrompt =
-          null;
-
-        installBtn.style.display =
-          "none";
-
-      }
-    );
+</main>
 
 
-    window.addEventListener(
-      "appinstalled",
-      function () {
+<script>
 
-        installBtn.style.display =
-          "none";
-
-        deferredInstallPrompt =
-          null;
-
-        console.log(
-          "Video Fetch berhasil diinstal."
-        );
-
-      }
-    );
+"use strict";
 
 
-    /* =====================================================
-       CEK JIKA SUDAH BERJALAN SEBAGAI APLIKASI
-    ===================================================== */
+/* =====================================================
+   ELEMENT
+===================================================== */
+
+const urlInput =
+  document.getElementById("url");
+
+const checkBtn =
+  document.getElementById("checkBtn");
+
+const downloadBtn =
+  document.getElementById("downloadBtn");
+
+const quality =
+  document.getElementById("quality");
+
+const statusBox =
+  document.getElementById("status");
+
+const thumbnailBox =
+  document.getElementById("thumbnailBox");
+
+const thumbnail =
+  document.getElementById("thumbnail");
+
+const videoInfo =
+  document.getElementById("videoInfo");
+
+const videoTitle =
+  document.getElementById("videoTitle");
+
+const videoMeta =
+  document.getElementById("videoMeta");
+
+const sourceBadge =
+  document.getElementById("sourceBadge");
+
+const clearUrl =
+  document.getElementById("clearUrl");
+
+const installBtn =
+  document.getElementById("installBtn");
+
+
+/* =====================================================
+   STATE
+===================================================== */
+
+let currentVideoId = "";
+
+let currentVideoUrl = "";
+
+let currentPlatform = "";
+
+let deferredInstallPrompt = null;
+
+
+/* =====================================================
+   PWA INSTALL
+===================================================== */
+
+window.addEventListener(
+  "beforeinstallprompt",
+  function(event) {
+
+    event.preventDefault();
+
+    deferredInstallPrompt =
+      event;
+
+    installBtn.style.display =
+      "block";
+
+  }
+);
+
+
+installBtn.addEventListener(
+  "click",
+  async function() {
+
+    if (!deferredInstallPrompt) {
+      return;
+    }
+
+    deferredInstallPrompt.prompt();
+
+    const result =
+      await deferredInstallPrompt.userChoice;
 
     if (
-      window.matchMedia(
-        "(display-mode: standalone)"
-      ).matches ||
-      window.navigator.standalone === true
+      result.outcome ===
+      "accepted"
     ) {
 
-      installBtn.style.display =
-        "none";
+      installBtn.textContent =
+        "✅ Video Fetch sedang dipasang...";
 
     }
 
+    deferredInstallPrompt =
+      null;
 
-    /* =====================================================
-       CLEAR URL
-    ===================================================== */
+    installBtn.style.display =
+      "none";
 
-    urlInput.addEventListener(
-      "input",
-      function () {
-
-        clearUrl.style.display =
-          urlInput.value.trim()
-            ? "block"
-            : "none";
-
-      }
-    );
+  }
+);
 
 
-    clearUrl.addEventListener(
-      "click",
-      function () {
+window.addEventListener(
+  "appinstalled",
+  function() {
 
-        urlInput.value = "";
+    installBtn.style.display =
+      "none";
 
-        clearUrl.style.display =
-          "none";
+    deferredInstallPrompt =
+      null;
 
-        resetVideo();
-
-        urlInput.focus();
-
-      }
-    );
+  }
+);
 
 
-    /* =====================================================
-       STATUS
-    ===================================================== */
+if (
+  window.matchMedia(
+    "(display-mode: standalone)"
+  ).matches ||
+  window.navigator.standalone === true
+) {
 
-    function showStatus(
-      message,
-      type
+  installBtn.style.display =
+    "none";
+
+}
+
+
+/* =====================================================
+   URL INPUT
+===================================================== */
+
+urlInput.addEventListener(
+  "input",
+  function() {
+
+    clearUrl.style.display =
+      urlInput.value.trim()
+        ? "block"
+        : "none";
+
+  }
+);
+
+
+clearUrl.addEventListener(
+  "click",
+  function() {
+
+    urlInput.value = "";
+
+    clearUrl.style.display =
+      "none";
+
+    resetVideo();
+
+    urlInput.focus();
+
+  }
+);
+
+
+/* =====================================================
+   STATUS
+===================================================== */
+
+function showStatus(
+  message,
+  type
+) {
+
+  statusBox.className =
+    "status " + type;
+
+  statusBox.textContent =
+    message;
+
+}
+
+
+function hideStatus() {
+
+  statusBox.className =
+    "status";
+
+  statusBox.textContent =
+    "";
+
+}
+
+
+/* =====================================================
+   PARSE URL
+===================================================== */
+
+function parseVideoUrl(
+  input
+) {
+
+  const text =
+    String(input || "").trim();
+
+  if (!text) {
+    return null;
+  }
+
+
+  let url;
+
+  try {
+
+    url =
+      new URL(text);
+
+  } catch {
+
+    return null;
+
+  }
+
+
+  const host =
+    url.hostname
+      .toLowerCase()
+      .replace(
+        /^www\./,
+        ""
+      );
+
+
+  /* =================================================
+     YOUTUBE
+  ================================================== */
+
+  if (
+    host ===
+    "youtu.be"
+  ) {
+
+    const id =
+      url.pathname
+        .split("/")
+        .filter(Boolean)[0];
+
+    if (
+      /^[A-Za-z0-9_-]{11}$/.test(
+        id || ""
+      )
     ) {
 
-      statusBox.className =
-        "status " + type;
+      return {
+        platform:
+          "youtube",
 
-      statusBox.textContent =
-        message;
+        id:
+          id,
+
+        url:
+          `https://www.youtube.com/watch?v=${id}`
+      };
 
     }
 
+    return null;
 
-    function hideStatus() {
-
-      statusBox.className =
-        "status";
-
-      statusBox.textContent =
-        "";
-
-    }
+  }
 
 
-    /* =====================================================
-       EXTRACT YOUTUBE ID
-    ===================================================== */
+  if (
+    [
+      "youtube.com",
+      "m.youtube.com",
+      "music.youtube.com"
+    ].includes(host)
+  ) {
 
-    function extractYouTubeId(
-      input
+    if (
+      url.pathname ===
+      "/watch"
     ) {
 
-      const text =
-        String(input || "").trim();
-
+      const id =
+        url.searchParams.get("v");
 
       if (
+        id &&
         /^[A-Za-z0-9_-]{11}$/.test(
-          text
+          id
         )
       ) {
 
-        return text;
+        return {
+          platform:
+            "youtube",
+
+          id:
+            id,
+
+          url:
+            `https://www.youtube.com/watch?v=${id}`
+        };
 
       }
 
+      return null;
 
-      let url;
-
-      try {
-
-        url =
-          new URL(text);
-
-      } catch {
-
-        return null;
-
-      }
+    }
 
 
-      const host =
-        url.hostname
-          .toLowerCase()
-          .replace(
-            /^www\./,
-            ""
+    const match =
+      url.pathname.match(
+        /^\/(?:shorts|embed|live)\/([A-Za-z0-9_-]{11})(?:\/|$)/
+      );
+
+
+    if (match) {
+
+      return {
+        platform:
+          "youtube",
+
+        id:
+          match[1],
+
+        url:
+          `https://www.youtube.com/watch?v=${match[1]}`
+      };
+
+    }
+
+    return null;
+
+  }
+
+
+  /* =================================================
+     FACEBOOK
+  ================================================== */
+
+  if (
+    host ===
+    "fb.watch"
+  ) {
+
+    return {
+      platform:
+        "facebook",
+
+      id:
+        "facebook",
+
+      url:
+        text
+    };
+
+  }
+
+
+  if (
+    [
+      "facebook.com",
+      "m.facebook.com",
+      "mbasic.facebook.com",
+      "web.facebook.com"
+    ].includes(host)
+  ) {
+
+    return {
+      platform:
+        "facebook",
+
+      id:
+        "facebook",
+
+      url:
+        text
+    };
+
+  }
+
+
+  return null;
+
+}
+
+
+/* =====================================================
+   DURATION
+===================================================== */
+
+function formatDuration(
+  seconds
+) {
+
+  seconds =
+    Number(
+      seconds || 0
+    );
+
+
+  if (!seconds) {
+    return "";
+  }
+
+
+  const hours =
+    Math.floor(
+      seconds / 3600
+    );
+
+
+  const minutes =
+    Math.floor(
+      (seconds % 3600) / 60
+    );
+
+
+  const secs =
+    Math.floor(
+      seconds % 60
+    );
+
+
+  if (hours > 0) {
+
+    return (
+      hours +
+      " jam " +
+      minutes +
+      " menit " +
+      secs +
+      " detik"
+    );
+
+  }
+
+
+  if (minutes > 0) {
+
+    return (
+      minutes +
+      " menit " +
+      secs +
+      " detik"
+    );
+
+  }
+
+
+  return (
+    secs +
+    " detik"
+  );
+
+}
+
+
+/* =====================================================
+   RESET
+===================================================== */
+
+function resetVideo() {
+
+  currentVideoId =
+    "";
+
+  currentVideoUrl =
+    "";
+
+  currentPlatform =
+    "";
+
+  videoInfo.style.display =
+    "none";
+
+  thumbnailBox.style.display =
+    "none";
+
+  thumbnail.src =
+    "";
+
+  videoTitle.textContent =
+    "";
+
+  videoMeta.textContent =
+    "";
+
+  sourceBadge.textContent =
+    "VIDEO";
+
+  quality.innerHTML =
+    "";
+
+  hideStatus();
+
+}
+
+
+/* =====================================================
+   SHOW VIDEO
+===================================================== */
+
+function showVideo(
+  info,
+  parsed
+) {
+
+  currentVideoId =
+    info.id ||
+    parsed.id ||
+    "";
+
+  currentVideoUrl =
+    urlInput.value.trim();
+
+  currentPlatform =
+    info.platform ||
+    parsed.platform ||
+    "";
+
+
+  /* =================================================
+     THUMBNAIL
+  ================================================== */
+
+  if (
+    info.thumbnail
+  ) {
+
+    thumbnail.src =
+      info.thumbnail;
+
+    thumbnailBox.style.display =
+      "block";
+
+  } else {
+
+    thumbnailBox.style.display =
+      "none";
+
+  }
+
+
+  /* =================================================
+     PLATFORM
+  ================================================== */
+
+  if (
+    currentPlatform ===
+    "facebook"
+  ) {
+
+    sourceBadge.textContent =
+      "📘 FACEBOOK";
+
+  } else {
+
+    sourceBadge.textContent =
+      "▶ YOUTUBE";
+
+  }
+
+
+  /* =================================================
+     TITLE
+  ================================================== */
+
+  videoTitle.textContent =
+    info.title ||
+    "Video";
+
+
+  /* =================================================
+     META
+  ================================================== */
+
+  const meta = [];
+
+
+  if (
+    info.uploader
+  ) {
+
+    meta.push(
+      "Channel: " +
+      info.uploader
+    );
+
+  }
+
+
+  if (
+    info.duration
+  ) {
+
+    meta.push(
+      "Durasi: " +
+      formatDuration(
+        info.duration
+      )
+    );
+
+  }
+
+
+  videoMeta.textContent =
+    meta.join(" · ");
+
+
+  /* =================================================
+     QUALITY
+  ================================================== */
+
+  quality.innerHTML =
+    "";
+
+
+  let heights =
+    Array.isArray(
+      info.heights
+    )
+      ? info.heights
+      : [];
+
+
+  heights =
+    [
+      ...new Set(
+        heights
+          .map(Number)
+          .filter(
+            Number.isFinite
+          )
+      )
+    ]
+    .sort(
+      (a,b) =>
+        b - a
+    );
+
+
+  if (
+    heights.length ===
+    0
+  ) {
+
+    heights = [
+      360,
+      480,
+      720
+    ];
+
+  }
+
+
+  heights.forEach(
+    function(height) {
+
+      const option =
+        document.createElement(
+          "option"
+        );
+
+
+      option.value =
+        String(height);
+
+
+      option.textContent =
+        height +
+        "p";
+
+
+      quality.appendChild(
+        option
+      );
+
+    }
+  );
+
+
+  if (
+    heights.includes(
+      480
+    )
+  ) {
+
+    quality.value =
+      "480";
+
+  } else {
+
+    quality.value =
+      String(
+        heights[
+          heights.length - 1
+        ]
+      );
+
+  }
+
+
+  videoInfo.style.display =
+    "block";
+
+
+  setTimeout(
+    function() {
+
+      thumbnailBox.scrollIntoView({
+        behavior:
+          "smooth",
+
+        block:
+          "start"
+      });
+
+    },
+    100
+  );
+
+}
+
+
+/* =====================================================
+   PERIKSA VIDEO
+===================================================== */
+
+checkBtn.addEventListener(
+  "click",
+  async function() {
+
+    const url =
+      urlInput.value.trim();
+
+
+    if (!url) {
+
+      showStatus(
+        "Masukkan URL YouTube atau Facebook terlebih dahulu.",
+        "error"
+      );
+
+      return;
+
+    }
+
+
+    const parsed =
+      parseVideoUrl(
+        url
+      );
+
+
+    if (!parsed) {
+
+      showStatus(
+        "URL YouTube atau Facebook tidak valid.",
+        "error"
+      );
+
+      return;
+
+    }
+
+
+    resetVideo();
+
+
+    checkBtn.disabled =
+      true;
+
+    checkBtn.textContent =
+      "Memeriksa...";
+
+
+    showStatus(
+      parsed.platform ===
+      "facebook"
+        ? "Sedang mengambil informasi video Facebook..."
+        : "Sedang mengambil informasi video YouTube...",
+      "loading"
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/info",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body:
+              JSON.stringify({
+                url:
+                  url
+              })
+          }
+        );
+
+
+      const data =
+        await response
+          .json()
+          .catch(
+            function() {
+              return {};
+            }
           );
 
 
       if (
-        host === "youtu.be"
+        !response.ok
       ) {
 
-        const id =
-          url.pathname
-            .split("/")
-            .filter(Boolean)[0];
-
-        return /^[A-Za-z0-9_-]{11}$/.test(
-          id || ""
-        )
-          ? id
-          : null;
-
-      }
-
-
-      if (
-        ![
-          "youtube.com",
-          "m.youtube.com",
-          "music.youtube.com"
-        ].includes(host)
-      ) {
-
-        return null;
-
-      }
-
-
-      if (
-        url.pathname ===
-        "/watch"
-      ) {
-
-        const id =
-          url.searchParams.get("v");
-
-        return id &&
-          /^[A-Za-z0-9_-]{11}$/.test(
-            id
-          )
-          ? id
-          : null;
-
-      }
-
-
-      const match =
-        url.pathname.match(
-          /^\/(?:shorts|embed|live)\/([A-Za-z0-9_-]{11})(?:\/|$)/
-        );
-
-
-      return match
-        ? match[1]
-        : null;
-
-    }
-
-
-    /* =====================================================
-       DURATION
-    ===================================================== */
-
-    function formatDuration(
-      seconds
-    ) {
-
-      seconds =
-        Number(seconds || 0);
-
-
-      if (!seconds) {
-        return "";
-      }
-
-
-      const hours =
-        Math.floor(
-          seconds / 3600
-        );
-
-
-      const minutes =
-        Math.floor(
-          (seconds % 3600) / 60
-        );
-
-
-      const secs =
-        Math.floor(
-          seconds % 60
-        );
-
-
-      if (hours > 0) {
-
-        return (
-          hours +
-          " jam " +
-          minutes +
-          " menit " +
-          secs +
-          " detik"
+        throw new Error(
+          data.error ||
+          "Video tidak dapat diperiksa."
         );
 
       }
 
 
-      if (minutes > 0) {
-
-        return (
-          minutes +
-          " menit " +
-          secs +
-          " detik"
-        );
-
-      }
-
-
-      return (
-        secs +
-        " detik"
+      showVideo(
+        data,
+        parsed
       );
 
-    }
+
+      showStatus(
+        "Video berhasil ditemukan.",
+        "success"
+      );
 
 
-    /* =====================================================
-       RESET
-    ===================================================== */
-
-    function resetVideo() {
-
-      currentVideoId =
-        "";
-
-      currentVideoUrl =
-        "";
-
-      videoInfo.style.display =
-        "none";
-
-      thumbnailBox.style.display =
-        "none";
-
-      thumbnail.src =
-        "";
-
-      videoTitle.textContent =
-        "";
-
-      videoMeta.textContent =
-        "";
-
-      quality.innerHTML =
-        "";
-
-      hideStatus();
-
-    }
-
-
-    /* =====================================================
-       SHOW VIDEO
-    ===================================================== */
-
-    function showVideo(
-      info,
-      fallbackId
+    } catch (
+      error
     ) {
 
-      currentVideoId =
-        info.id ||
-        fallbackId ||
-        "";
+      showStatus(
+        error.message ||
+        "Gagal memeriksa video.",
+        "error"
+      );
+
+    } finally {
+
+      checkBtn.disabled =
+        false;
+
+      checkBtn.textContent =
+        "🔍  Periksa video";
+
+    }
+
+  }
+);
 
 
-      currentVideoUrl =
-        urlInput.value.trim();
+/* =====================================================
+   DOWNLOAD MP4
+===================================================== */
+
+downloadBtn.addEventListener(
+  "click",
+  async function() {
+
+    const videoUrl =
+      urlInput.value.trim();
+
+
+    if (!videoUrl) {
+
+      showStatus(
+        "URL video tidak ditemukan.",
+        "error"
+      );
+
+      return;
+
+    }
+
+
+    const parsed =
+      parseVideoUrl(
+        videoUrl
+      );
+
+
+    if (!parsed) {
+
+      showStatus(
+        "URL YouTube atau Facebook tidak valid.",
+        "error"
+      );
+
+      return;
+
+    }
+
+
+    const height =
+      Number(
+        quality.value ||
+        480
+      );
+
+
+    downloadBtn.disabled =
+      true;
+
+    downloadBtn.textContent =
+      "Menyiapkan MP4...";
+
+
+    showStatus(
+      parsed.platform ===
+      "facebook"
+        ? "Memproses video Facebook..."
+        : "Memproses video YouTube...",
+      "loading"
+    );
+
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/download",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body:
+              JSON.stringify({
+
+                url:
+                  videoUrl,
+
+                videoId:
+                  parsed.id,
+
+                platform:
+                  parsed.platform,
+
+                height:
+                  height
+
+              })
+          }
+        );
+
+
+      const data =
+        await response
+          .json()
+          .catch(
+            function() {
+              return {};
+            }
+          );
 
 
       if (
-        !/^[A-Za-z0-9_-]{11}$/.test(
-          currentVideoId
-        )
+        !response.ok
       ) {
 
-        currentVideoId =
-          fallbackId;
-
-      }
-
-
-      /* =================================================
-         THUMBNAIL SATU
-      ================================================== */
-
-      if (
-        info.thumbnail
-      ) {
-
-        thumbnail.src =
-          info.thumbnail;
-
-        thumbnailBox.style.display =
-          "block";
-
-      } else {
-
-        thumbnailBox.style.display =
-          "none";
-
-      }
-
-
-      /* =================================================
-         TITLE
-      ================================================== */
-
-      videoTitle.textContent =
-        info.title ||
-        "Video YouTube";
-
-
-      /* =================================================
-         META
-      ================================================== */
-
-      const meta = [];
-
-
-      if (
-        info.uploader
-      ) {
-
-        meta.push(
-          "Channel: " +
-          info.uploader
+        throw new Error(
+          data.error ||
+          "Download gagal."
         );
 
       }
 
 
       if (
-        info.duration
+        !data.jobId
       ) {
 
-        meta.push(
-          "Durasi: " +
-          formatDuration(
-            info.duration
-          )
+        throw new Error(
+          "Server tidak memberikan ID proses."
         );
 
       }
 
 
-      videoMeta.textContent =
-        meta.join(" · ");
+      showStatus(
+        "Video sedang diproses...",
+        "loading"
+      );
 
 
       /* =================================================
-         QUALITY
+         POLLING
       ================================================== */
 
-      quality.innerHTML =
-        "";
-
-
-      let heights =
-        Array.isArray(
-          info.heights
-        )
-          ? info.heights
-          : [];
-
-
-      heights =
-        [
-          ...new Set(
-            heights
-              .map(Number)
-              .filter(
-                Number.isFinite
-              )
-          )
-        ]
-        .sort(
-          (a, b) => b - a
-        );
-
-
-      if (
-        heights.length === 0
+      for (
+        let attempt = 0;
+        attempt < 180;
+        attempt++
       ) {
 
-        heights = [
-          360,
-          480,
-          720
-        ];
+        await new Promise(
+          function(resolve) {
 
-      }
-
-
-      heights.forEach(
-        height => {
-
-          const option =
-            document.createElement(
-              "option"
+            setTimeout(
+              resolve,
+              2000
             );
 
-
-          option.value =
-            String(height);
-
-
-          option.textContent =
-            height +
-            "p";
-
-
-          quality.appendChild(
-            option
-          );
-
-        }
-      );
-
-
-      /* Default 480p */
-
-      if (
-        heights.includes(480)
-      ) {
-
-        quality.value =
-          "480";
-
-      } else {
-
-        quality.value =
-          String(
-            heights[
-              heights.length - 1
-            ]
-          );
-
-      }
-
-
-      videoInfo.style.display =
-        "block";
-
-
-      /* Scroll */
-
-      setTimeout(
-        () => {
-
-          thumbnailBox.scrollIntoView({
-            behavior:
-              "smooth",
-            block:
-              "start"
-          });
-
-        },
-        100
-      );
-
-    }
-
-
-    /* =====================================================
-       PERIKSA VIDEO
-       API TETAP /api/info
-    ====================================================== */
-
-    checkBtn.addEventListener(
-      "click",
-      async function () {
-
-        const url =
-          urlInput.value.trim();
-
-
-        if (!url) {
-
-          showStatus(
-            "Masukkan URL YouTube terlebih dahulu.",
-            "error"
-          );
-
-          return;
-
-        }
-
-
-        const videoId =
-          extractYouTubeId(
-            url
-          );
-
-
-        if (!videoId) {
-
-          showStatus(
-            "URL YouTube tidak valid.",
-            "error"
-          );
-
-          return;
-
-        }
-
-
-        resetVideo();
-
-
-        checkBtn.disabled =
-          true;
-
-        checkBtn.textContent =
-          "Memeriksa...";
-
-
-        showStatus(
-          "Sedang mengambil informasi video...",
-          "loading"
+          }
         );
 
 
-        try {
+        const statusResponse =
+          await fetch(
+            "/api/jobs/" +
+            encodeURIComponent(
+              data.jobId
+            ),
+            {
+              cache:
+                "no-store"
+            }
+          );
 
-          const response =
-            await fetch(
-              "/api/info",
-              {
-                method:
-                  "POST",
 
-                headers: {
-                  "Content-Type":
-                    "application/json"
-                },
-
-                body:
-                  JSON.stringify({
-                    url:
-                      url
-                  })
+        const job =
+          await statusResponse
+            .json()
+            .catch(
+              function() {
+                return {};
               }
             );
 
 
-          const data =
-            await response
-              .json()
-              .catch(
-                () => ({})
-              );
-
+        if (
+          job.status ===
+          "ready"
+        ) {
 
           if (
-            !response.ok
+            !job.downloadUrl
           ) {
 
             throw new Error(
-              data.error ||
-              "Video tidak dapat diperiksa."
+              "File siap tetapi URL download tidak tersedia."
             );
 
           }
 
 
-          showVideo(
-            data,
-            videoId
-          );
-
-
           showStatus(
-            "Video berhasil ditemukan.",
+            "Video siap. Download dimulai...",
             "success"
           );
 
 
-        } catch (
-          error
+          window.location.href =
+            job.downloadUrl;
+
+
+          return;
+
+        }
+
+
+        if (
+          job.status ===
+          "failed"
         ) {
 
-          showStatus(
-            error.message ||
-            "Gagal memeriksa video.",
-            "error"
+          throw new Error(
+            job.error ||
+            "Server gagal memproses video."
           );
-
-        } finally {
-
-          checkBtn.disabled =
-            false;
-
-          checkBtn.textContent =
-            "🔍  Periksa video";
 
         }
-
-      }
-    );
-
-
-    /* =====================================================
-       DOWNLOAD MP4
-       API TETAP /api/download
-    ====================================================== */
-
-    downloadBtn.addEventListener(
-      "click",
-      async function () {
-
-        const videoUrl =
-          urlInput.value.trim();
-
-
-        if (!videoUrl) {
-
-          showStatus(
-            "URL video tidak ditemukan.",
-            "error"
-          );
-
-          return;
-
-        }
-
-
-        const videoId =
-          extractYouTubeId(
-            videoUrl
-          );
-
-
-        if (!videoId) {
-
-          showStatus(
-            "URL YouTube tidak valid.",
-            "error"
-          );
-
-          return;
-
-        }
-
-
-        const height =
-          Number(
-            quality.value ||
-            360
-          );
-
-
-        downloadBtn.disabled =
-          true;
-
-        downloadBtn.textContent =
-          "Menyiapkan MP4...";
 
 
         showStatus(
-          "Mengirim permintaan download...",
+          parsed.platform ===
+          "facebook"
+            ? "Video Facebook sedang diproses, tunggu..."
+            : "Video YouTube sedang diproses, tunggu...",
           "loading"
         );
 
-
-        try {
-
-          const response =
-            await fetch(
-              "/api/download",
-              {
-                method:
-                  "POST",
-
-                headers: {
-                  "Content-Type":
-                    "application/json"
-                },
-
-                body:
-                  JSON.stringify({
-                    url:
-                      videoUrl,
-
-                    videoId:
-                      videoId,
-
-                    height:
-                      height
-                  })
-              }
-            );
-
-
-          const data =
-            await response
-              .json()
-              .catch(
-                () => ({})
-              );
-
-
-          if (
-            !response.ok
-          ) {
-
-            throw new Error(
-              data.error ||
-              "Download gagal."
-            );
-
-          }
-
-
-          if (
-            !data.jobId
-          ) {
-
-            throw new Error(
-              "Server tidak memberikan ID proses."
-            );
-
-          }
-
-
-          showStatus(
-            "Video sedang diproses...",
-            "loading"
-          );
-
-
-          /* =================================================
-             POLLING
-          ================================================== */
-
-          for (
-            let attempt = 0;
-            attempt < 180;
-            attempt++
-          ) {
-
-            await new Promise(
-              resolve =>
-                setTimeout(
-                  resolve,
-                  2000
-                )
-            );
-
-
-            const statusResponse =
-              await fetch(
-                "/api/jobs/" +
-                encodeURIComponent(
-                  data.jobId
-                ),
-                {
-                  cache:
-                    "no-store"
-                }
-              );
-
-
-            const job =
-              await statusResponse
-                .json()
-                .catch(
-                  () => ({})
-                );
-
-
-            if (
-              job.status ===
-              "ready"
-            ) {
-
-              if (
-                !job.downloadUrl
-              ) {
-
-                throw new Error(
-                  "File siap tetapi URL download tidak tersedia."
-                );
-
-              }
-
-
-              showStatus(
-                "Video siap. Download dimulai...",
-                "success"
-              );
-
-
-              window.location.href =
-                job.downloadUrl;
-
-
-              return;
-
-            }
-
-
-            if (
-              job.status ===
-              "failed"
-            ) {
-
-              throw new Error(
-                job.error ||
-                "yt-dlp gagal memproses video."
-              );
-
-            }
-
-
-            showStatus(
-              "Video sedang diproses, tunggu...",
-              "loading"
-            );
-
-          }
-
-
-          throw new Error(
-            "Proses terlalu lama. Coba lagi."
-          );
-
-
-        } catch (
-          error
-        ) {
-
-          showStatus(
-            error.message ||
-            "Download gagal.",
-            "error"
-          );
-
-        } finally {
-
-          downloadBtn.disabled =
-            false;
-
-          downloadBtn.textContent =
-            "↓  Unduh MP4";
-
-        }
-
       }
-    );
 
 
-    /* =====================================================
-       ENTER
-    ===================================================== */
-
-    urlInput.addEventListener(
-      "keydown",
-      function (event) {
-
-        if (
-          event.key ===
-          "Enter"
-        ) {
-
-          event.preventDefault();
-
-          checkBtn.click();
-
-        }
-
-      }
-    );
+      throw new Error(
+        "Proses terlalu lama. Coba lagi."
+      );
 
 
-    /* =====================================================
-       SERVICE WORKER
-    ===================================================== */
-
-    if (
-      "serviceWorker" in
-      navigator
+    } catch (
+      error
     ) {
 
-      window.addEventListener(
-        "load",
-        function () {
-
-          navigator.serviceWorker
-            .register(
-              "/sw.js"
-            )
-            .then(
-              registration => {
-
-                console.log(
-                  "Service Worker aktif:",
-                  registration.scope
-                );
-
-              }
-            )
-            .catch(
-              error => {
-
-                console.error(
-                  "Service Worker gagal:",
-                  error
-                );
-
-              }
-            );
-
-        }
+      showStatus(
+        error.message ||
+        "Download gagal.",
+        "error"
       );
+
+    } finally {
+
+      downloadBtn.disabled =
+        false;
+
+      downloadBtn.textContent =
+        "↓  Unduh MP4";
 
     }
 
-  </script>
+  }
+);
+
+
+/* =====================================================
+   ENTER
+===================================================== */
+
+urlInput.addEventListener(
+  "keydown",
+  function(event) {
+
+    if (
+      event.key ===
+      "Enter"
+    ) {
+
+      event.preventDefault();
+
+      checkBtn.click();
+
+    }
+
+  }
+);
+
+
+/* =====================================================
+   SERVICE WORKER
+===================================================== */
+
+if (
+  "serviceWorker" in
+  navigator
+) {
+
+  window.addEventListener(
+    "load",
+    function() {
+
+      navigator.serviceWorker
+        .register(
+          "/sw.js"
+        )
+        .then(
+          function(registration) {
+
+            console.log(
+              "Service Worker aktif:",
+              registration.scope
+            );
+
+          }
+        )
+        .catch(
+          function(error) {
+
+            console.error(
+              "Service Worker gagal:",
+              error
+            );
+
+          }
+        );
+
+    }
+  );
+
+}
+
+</script>
 
 </body>
 </html>
