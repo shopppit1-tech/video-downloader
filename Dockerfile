@@ -2,81 +2,70 @@ FROM node:22-bookworm-slim
 
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV PATH="/opt/venv/bin:${PATH}"
-
-# =====================================================
-# SYSTEM DEPENDENCIES
-# =====================================================
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        python3 \
-        python3-venv \
-        ffmpeg \
-        git \
-        ca-certificates \
-    && python3 -m venv /opt/venv \
-    && /opt/venv/bin/python -m pip install --upgrade pip \
-    && /opt/venv/bin/python -m pip install --no-cache-dir -U "yt-dlp[default]" \
-    && /opt/venv/bin/python -m pip install --no-cache-dir -U bgutil-ytdlp-pot-provider \
+RUN apt-get update && \
+    apt-get install -y \
+    python3 \
+    python3-venv \
+    python3-dev \
+    ffmpeg \
+    git \
+    make \
+    g++ \
+    pkg-config \
+    libcairo2-dev \
+    libjpeg-dev \
+    libpango1.0-dev \
+    libgif-dev \
+    librsvg2-dev \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# =========================
+# PYTHON ENVIRONMENT
+# =========================
 
-# =====================================================
-# BGUTIL SERVER
-# =====================================================
+RUN python3 -m venv /opt/venv
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -U "yt-dlp[default]" \
+    bgutil-ytdlp-pot-provider
+
+# =========================
+# BGUTIL PO TOKEN PROVIDER
+# =========================
 
 RUN git clone \
-    --depth 1 \
+    --single-branch \
+    --branch 2.0.1 \
     https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git \
-    /opt/bgutil
+    /app/bgutil
 
-RUN cd /opt/bgutil/server \
-    && npm ci --omit=dev \
-    && npx tsc
+WORKDIR /app/bgutil/server
 
+RUN npm ci && \
+    npx tsc
 
-# =====================================================
-# NODE APP
-# =====================================================
+# =========================
+# MAIN APPLICATION
+# =========================
+
+WORKDIR /app
 
 COPY package*.json ./
 
 RUN npm install --omit=dev
 
-
-# =====================================================
-# APP
-# =====================================================
-
 COPY . .
 
+RUN mkdir -p /app/temp
 
-# =====================================================
-# CHECK
-# =====================================================
-
-RUN echo "===== NODE =====" \
-    && node --version \
-    && echo "===== YT-DLP =====" \
-    && yt-dlp --version \
-    && echo "===== FFMPEG =====" \
-    && ffmpeg -version | head -n 1 \
-    && echo "===== BGUTIL =====" \
-    && test -f /opt/bgutil/server/build/main.js \
-    && echo "BGUTIL SERVER OK"
-
-
-# =====================================================
-# PORT
-# =====================================================
+ENV NODE_ENV=production
+ENV PATH="/opt/venv/bin:$PATH"
 
 EXPOSE 3000
 
-
-# =====================================================
-# START POT + APP
-# =====================================================
-
-CMD ["sh", "-c", "node /opt/bgutil/server/build/main.js --host 127.0.0.1 --port 4416 & exec node server.js"]
+# Jalankan PO Token Provider
+# lalu jalankan server utama
+CMD ["sh", "-c", "node /app/bgutil/server/build/main.js --host 127.0.0.1 --port 4416 & exec node /app/server.js"]
