@@ -90,7 +90,6 @@ app.use(
 
 /* =========================================================
    CORS
-   Supaya GitHub Pages -> Render bisa akses API
 ========================================================= */
 
 app.use((req, res, next) => {
@@ -122,66 +121,7 @@ app.use((req, res, next) => {
 });
 
 /* =========================================================
-   SIMPLE RATE LIMIT
-   HANYA UNTUK API YANG MEMBUAT BEBAN
-========================================================= */
-
-const requestMap = new Map();
-
-function apiRateLimit(
-  windowMs,
-  max
-) {
-  return (req, res, next) => {
-    const ip =
-      req.ip ||
-      req.socket.remoteAddress ||
-      "unknown";
-
-    const key =
-      `${req.path}:${ip}`;
-
-    const now =
-      Date.now();
-
-    let item =
-      requestMap.get(key);
-
-    if (
-      !item ||
-      item.resetAt <= now
-    ) {
-      item = {
-        count: 0,
-        resetAt:
-          now + windowMs
-      };
-
-      requestMap.set(
-        key,
-        item
-      );
-    }
-
-    item.count++;
-
-    if (
-      item.count > max
-    ) {
-      return res
-        .status(429)
-        .json({
-          error:
-            "Terlalu banyak permintaan. Tunggu sebentar."
-        });
-    }
-
-    next();
-  };
-}
-
-/* =========================================================
-   STATIC FRONTEND
+   STATIC
 ========================================================= */
 
 app.use(
@@ -198,10 +138,7 @@ app.use(
    HELPERS
 ========================================================= */
 
-function text(
-  value,
-  fallback = ""
-) {
+function text(value, fallback = "") {
   if (
     value === undefined ||
     value === null
@@ -212,28 +149,76 @@ function text(
   return String(value);
 }
 
-function safeFilename(
-  value
-) {
-  return (
-    text(
-      value,
-      "video"
+/*
+ * Bersihkan judul video untuk nama file.
+ */
+function cleanFilename(value) {
+  let name = text(
+    value,
+    "Video"
+  );
+
+  name = name
+    .replace(
+      /[<>:"/\\|?*\x00-\x1F]/g,
+      ""
     )
-      .replace(
-        /[<>:"/\\|?*\x00-\x1F]/g,
-        "_"
-      )
-      .replace(
-        /\s+/g,
-        " "
-      )
-      .trim()
-      .slice(
-        0,
-        120
-      ) ||
-    "video"
+    .replace(
+      /[\u0000-\u001F]/g,
+      ""
+    )
+    .replace(
+      /\s+/g,
+      " "
+    )
+    .trim();
+
+  /*
+   * Hilangkan titik/spasi di akhir
+   * karena Windows tidak menyukainya.
+   */
+  name = name.replace(
+    /[.\s]+$/,
+    ""
+  );
+
+  /*
+   * Maksimal 100 karakter judul.
+   */
+  name = name.slice(
+    0,
+    100
+  );
+
+  return (
+    name ||
+    "Video"
+  );
+}
+
+function makeShortId() {
+  return crypto
+    .randomBytes(5)
+    .toString("hex");
+}
+
+function makeFilename(
+  platform,
+  title
+) {
+  const platformName =
+    platform === "facebook"
+      ? "Facebook"
+      : "YouTube";
+
+  const cleanTitle =
+    cleanFilename(title);
+
+  const shortId =
+    makeShortId();
+
+  return (
+    `${platformName}_${cleanTitle}_${shortId}.mp4`
   );
 }
 
@@ -282,23 +267,11 @@ function makeJobId() {
     .toString("hex");
 }
 
-function sleep(ms) {
-  return new Promise(
-    resolve =>
-      setTimeout(
-        resolve,
-        ms
-      )
-  );
-}
-
 /* =========================================================
-   URL PARSER
+   URL
 ========================================================= */
 
-function parseVideoUrl(
-  input
-) {
+function parseVideoUrl(input) {
   const raw =
     text(input).trim();
 
@@ -311,8 +284,7 @@ function parseVideoUrl(
   let url;
 
   try {
-    url =
-      new URL(raw);
+    url = new URL(raw);
   } catch {
     throw new Error(
       "URL video tidak valid."
@@ -335,26 +307,26 @@ function parseVideoUrl(
   const host =
     url.hostname.toLowerCase();
 
-  const youtube =
+  const isYouTube =
     host === "youtube.com" ||
     host.endsWith(".youtube.com") ||
     host === "youtu.be" ||
     host.endsWith(".youtu.be");
 
-  const facebook =
+  const isFacebook =
     host === "facebook.com" ||
     host.endsWith(".facebook.com") ||
     host === "fb.watch" ||
     host.endsWith(".fb.watch");
 
-  if (youtube) {
+  if (isYouTube) {
     return {
       platform: "youtube",
       url: url.toString()
     };
   }
 
-  if (facebook) {
+  if (isFacebook) {
     return {
       platform: "facebook",
       url: url.toString()
@@ -367,7 +339,7 @@ function parseVideoUrl(
 }
 
 /* =========================================================
-   YOUTUBE COOKIES
+   COOKIE
 ========================================================= */
 
 async function setupCookies() {
@@ -431,7 +403,6 @@ async function baseYtDlpArgs(
 ) {
   const args = [
     "--no-playlist",
-
     "--no-warnings",
 
     "--socket-timeout",
@@ -463,20 +434,11 @@ async function baseYtDlpArgs(
       "ejs:github"
     );
 
-    /*
-     * BGUTIL PO TOKEN
-     */
     args.push(
       "--extractor-args",
       `youtubepot-bgutilhttp:base_url=${POT_BASE_URL}`
     );
 
-    /*
-     * YouTube client.
-     *
-     * default,mweb memberi yt-dlp
-     * beberapa jalur ekstraksi.
-     */
     args.push(
       "--extractor-args",
       "youtube:player_client=default,mweb"
@@ -552,7 +514,7 @@ function run(
 
       const maxOutput =
         options.maxOutput ||
-        30 * 1024 * 1024;
+        40 * 1024 * 1024;
 
       child.stdout.on(
         "data",
@@ -590,7 +552,7 @@ function run(
         }
       );
 
-      let timer;
+      let timer = null;
 
       if (
         options.timeoutMs
@@ -683,12 +645,10 @@ function run(
 }
 
 /* =========================================================
-   VIDEO INFO
+   INFO
 ========================================================= */
 
-function getThumbnail(
-  info
-) {
+function getThumbnail(info) {
   if (
     info.thumbnail
   ) {
@@ -712,9 +672,7 @@ function getThumbnail(
   return null;
 }
 
-function collectQualities(
-  info
-) {
+function collectQualities(info) {
   const values =
     new Set();
 
@@ -724,19 +682,23 @@ function collectQualities(
     )
   ) {
     for (
-      const f of info.formats
+      const format of info.formats
     ) {
-      const h =
+      const height =
         Number(
-          f.height
+          format.height
         );
 
       if (
-        Number.isFinite(h) &&
-        h >= 144 &&
-        h <= 2160
+        Number.isFinite(
+          height
+        ) &&
+        height >= 144 &&
+        height <= 2160
       ) {
-        values.add(h);
+        values.add(
+          height
+        );
       }
     }
   }
@@ -808,10 +770,6 @@ function publicVideoInfo(
   };
 }
 
-/* =========================================================
-   INSPECT VIDEO
-========================================================= */
-
 async function inspectVideo(
   video
 ) {
@@ -840,9 +798,7 @@ async function inspectVideo(
             120000,
 
           maxOutput:
-            40 *
-            1024 *
-            1024
+            40 * 1024 * 1024
         }
       );
 
@@ -850,32 +806,32 @@ async function inspectVideo(
       result.stdout
         .split(/\r?\n/)
         .map(
-          x =>
-            x.trim()
+          line =>
+            line.trim()
         )
         .filter(Boolean);
 
-    const line =
+    const jsonLine =
       [...lines]
         .reverse()
         .find(
-          x =>
-            x.startsWith(
+          line =>
+            line.startsWith(
               "{"
             ) &&
-            x.endsWith(
+            line.endsWith(
               "}"
             )
         );
 
-    if (!line) {
+    if (!jsonLine) {
       throw new Error(
         "yt-dlp tidak menghasilkan JSON."
       );
     }
 
     return JSON.parse(
-      line
+      jsonLine
     );
   } catch (error) {
     console.error(
@@ -895,17 +851,19 @@ async function inspectVideo(
 }
 
 /* =========================================================
-   DOWNLOAD SOURCE
+   DOWNLOAD
 ========================================================= */
 
 function requestedHeight(
   value
 ) {
-  const h =
+  const height =
     Number(value);
 
   if (
-    !Number.isFinite(h)
+    !Number.isFinite(
+      height
+    )
   ) {
     return 720;
   }
@@ -914,7 +872,7 @@ function requestedHeight(
     2160,
     Math.max(
       144,
-      Math.round(h)
+      Math.round(height)
     )
   );
 }
@@ -929,23 +887,19 @@ async function downloadSource(
       video.platform
     );
 
-  /*
-   * MP4/H264/AAC diprioritaskan.
-   */
-  const format =
-    [
-      `bv*[height<=${height}][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a][ext=m4a]`,
+  const format = [
+    `bv*[height<=${height}][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a][ext=m4a]`,
 
-      `bv*[height<=${height}][vcodec^=avc1][ext=mp4]+ba[ext=m4a]`,
+    `bv*[height<=${height}][vcodec^=avc1][ext=mp4]+ba[ext=m4a]`,
 
-      `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
+    `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
 
-      `bv*[height<=${height}]+ba`,
+    `bv*[height<=${height}]+ba`,
 
-      `b[height<=${height}]`,
+    `b[height<=${height}]`,
 
-      "b"
-    ].join("/");
+    "b"
+  ].join("/");
 
   args.push(
     "--format",
@@ -972,9 +926,7 @@ async function downloadSource(
         30 * 60 * 1000,
 
       maxOutput:
-        40 *
-        1024 *
-        1024
+        40 * 1024 * 1024
     }
   );
 }
@@ -1040,15 +992,13 @@ async function convertToMp4(
         45 * 60 * 1000,
 
       maxOutput:
-        20 *
-        1024 *
-        1024
+        20 * 1024 * 1024
     }
   );
 }
 
 /* =========================================================
-   FILE FINDER
+   FIND FILE
 ========================================================= */
 
 async function findDownloadedFile(
@@ -1140,7 +1090,7 @@ async function findDownloadedFile(
 }
 
 /* =========================================================
-   JOB CLEANUP
+   CLEANUP
 ========================================================= */
 
 async function removeFile(
@@ -1198,7 +1148,9 @@ async function cleanupExpiredJobs() {
         job.createdAt >
       FILE_TTL_MS
     ) {
-      jobs.delete(id);
+      jobs.delete(
+        id
+      );
 
       console.log(
         `[CLEANUP] ${id}`
@@ -1225,15 +1177,20 @@ app.get(
   (req, res) => {
     res.json({
       ok: true,
+
       service:
         "video-fetch",
+
       uptime:
         Math.floor(
           process.uptime()
         ),
+
       activeDownloads,
+
       jobs:
         jobs.size,
+
       potServer:
         POT_BASE_URL
     });
@@ -1246,7 +1203,10 @@ app.get(
 
 app.get(
   "/api/diagnostics",
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     const result = {
       ok: true,
 
@@ -1289,9 +1249,7 @@ app.get(
 
       result.ytDlp =
         r.stdout.trim();
-    } catch (
-      error
-    ) {
+    } catch (error) {
       result.ytDlp =
         error.message;
     }
@@ -1300,9 +1258,7 @@ app.get(
       const r =
         await run(
           "ffmpeg",
-          [
-            "-version"
-          ],
+          ["-version"],
           {
             timeoutMs:
               15000
@@ -1312,9 +1268,7 @@ app.get(
       result.ffmpeg =
         r.stdout
           .split(/\r?\n/)[0];
-    } catch (
-      error
-    ) {
+    } catch (error) {
       result.ffmpeg =
         error.message;
     }
@@ -1326,17 +1280,12 @@ app.get(
 );
 
 /* =========================================================
-   INFO
+   API INFO
+   TANPA RATE LIMIT
 ========================================================= */
 
 app.post(
   "/api/info",
-
-  apiRateLimit(
-    15 * 60 * 1000,
-    30
-  ),
-
   async (
     req,
     res
@@ -1374,9 +1323,7 @@ app.post(
           video.platform
         )
       );
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         "[INFO ERROR]",
         error.message
@@ -1393,17 +1340,11 @@ app.post(
 );
 
 /* =========================================================
-   CREATE DOWNLOAD JOB
+   API DOWNLOAD
 ========================================================= */
 
 app.post(
   "/api/download",
-
-  apiRateLimit(
-    15 * 60 * 1000,
-    20
-  ),
-
   async (
     req,
     res
@@ -1427,9 +1368,7 @@ app.post(
         parseVideoUrl(
           req.body?.url
         );
-    } catch (
-      error
-    ) {
+    } catch (error) {
       return res
         .status(400)
         .json({
@@ -1452,14 +1391,55 @@ app.post(
         jobId
       );
 
-    const title =
-      safeFilename(
+    /*
+     * Kalau frontend mengirim title,
+     * pakai title tersebut.
+     *
+     * Kalau tidak, sementara gunakan
+     * "Video" dan nanti diganti
+     * setelah info didapat.
+     */
+    let title =
+      cleanFilename(
         req.body?.title ||
-        `VideoFetch_${video.platform}`
+        ""
       );
 
+    /*
+     * Kalau title tidak dikirim,
+     * ambil judul video dari yt-dlp.
+     */
+    if (
+      !title ||
+      title === "Video"
+    ) {
+      try {
+        const info =
+          await inspectVideo(
+            video
+          );
+
+        title =
+          cleanFilename(
+            info.title ||
+            "Video"
+          );
+      } catch (error) {
+        console.log(
+          "Tidak bisa mengambil judul awal:",
+          error.message
+        );
+
+        title =
+          "Video";
+      }
+    }
+
     const filename =
-      `${title}.mp4`;
+      makeFilename(
+        video.platform,
+        title
+      );
 
     const filePath =
       path.join(
@@ -1475,7 +1455,8 @@ app.post(
     );
 
     const job = {
-      id: jobId,
+      id:
+        jobId,
 
       platform:
         video.platform,
@@ -1520,33 +1501,41 @@ app.post(
       job
     );
 
-    /*
-     * URL ABSOLUT Render.
-     * Ini penting kalau frontend berada
-     * di GitHub Pages.
-     */
     const downloadUrl =
       `${BASE_URL}/api/jobs/${jobId}/file`;
+
+    console.log(
+      "========================================"
+    );
 
     console.log(
       `[JOB CREATED] ${jobId}`
     );
 
     console.log(
-      `[DOWNLOAD] ${video.platform}`
+      `[PLATFORM] ${video.platform}`
     );
 
     console.log(
-      `[DOWNLOAD] ${video.url}`
+      `[TITLE] ${title}`
     );
 
     console.log(
-      `[DOWNLOAD] height: ${height}`
+      `[FILENAME] ${filename}`
     );
 
-    /*
-     * Balikkan job langsung.
-     */
+    console.log(
+      `[QUALITY] ${height}p`
+    );
+
+    console.log(
+      `[DOWNLOAD URL] ${downloadUrl}`
+    );
+
+    console.log(
+      "========================================"
+    );
+
     res.json({
       ok: true,
 
@@ -1561,14 +1550,13 @@ app.post(
       quality:
         height,
 
+      title,
+
       filename,
 
       downloadUrl
     });
 
-    /*
-     * Kerjakan di background.
-     */
     processDownloadJob(
       job
     ).catch(
@@ -1633,12 +1621,12 @@ async function processDownloadJob(
     job.sourceFile =
       source;
 
+    job.status =
+      "converting";
+
     console.log(
       `[FFMPEG] ${source}`
     );
-
-    job.status =
-      "converting";
 
     await convertToMp4(
       source,
@@ -1668,9 +1656,6 @@ async function processDownloadJob(
     job.finishedAt =
       Date.now();
 
-    /*
-     * Hapus file sumber.
-     */
     await removeFile(
       source
     );
@@ -1679,15 +1664,33 @@ async function processDownloadJob(
       null;
 
     console.log(
-      `[SUCCESS] size: ${job.size} bytes`
+      "========================================"
     );
 
     console.log(
       `[SUCCESS] ${job.id}`
     );
-  } catch (
-    error
-  ) {
+
+    console.log(
+      `[TITLE] ${job.title}`
+    );
+
+    console.log(
+      `[FILENAME] ${job.filename}`
+    );
+
+    console.log(
+      `[SIZE] ${job.size} bytes`
+    );
+
+    console.log(
+      `[DOWNLOAD] ${BASE_URL}/api/jobs/${job.id}/file`
+    );
+
+    console.log(
+      "========================================"
+    );
+  } catch (error) {
     job.status =
       "failed";
 
@@ -1721,8 +1724,6 @@ async function processDownloadJob(
 
 /* =========================================================
    JOB STATUS
-   TIDAK diberi rate limit
-   supaya polling tidak berhenti.
 ========================================================= */
 
 app.get(
@@ -1752,6 +1753,14 @@ app.get(
       "no-store, no-cache, must-revalidate"
     );
 
+    /*
+     * status dibuat tetap "ready"
+     * ketika file selesai.
+     *
+     * Ditambahkan juga completed
+     * agar frontend dengan nama status
+     * berbeda tetap bisa membaca.
+     */
     res.json({
       ok: true,
 
@@ -1761,11 +1770,20 @@ app.get(
       status:
         job.status,
 
+      completed:
+        job.status === "ready",
+
+      ready:
+        job.status === "ready",
+
       platform:
         job.platform,
 
       quality:
         job.height,
+
+      title:
+        job.title,
 
       filename:
         job.filename,
@@ -1778,10 +1796,6 @@ app.get(
         "failed"
           ? job.error
           : null,
-
-      ready:
-        job.status ===
-        "ready",
 
       downloadUrl:
         job.status ===
@@ -1824,6 +1838,7 @@ app.get(
         .json({
           error:
             "File belum siap.",
+
           status:
             job.status
         });
@@ -1845,19 +1860,12 @@ app.get(
       }
 
       console.log(
-        `[FILE] sending ${job.id} ${stat.size} bytes`
+        `[FILE] sending ${job.filename} (${stat.size} bytes)`
       );
 
       res.setHeader(
         "Content-Type",
         "video/mp4"
-      );
-
-      res.setHeader(
-        "Content-Length",
-        String(
-          stat.size
-        )
       );
 
       res.setHeader(
@@ -1883,15 +1891,20 @@ app.get(
         "nosniff"
       );
 
-      /*
-       * Dukungan Range request.
-       * Lebih aman untuk download besar
-       * di Android/browser.
-       */
       const range =
         req.headers.range;
 
+      /*
+       * DOWNLOAD NORMAL
+       */
       if (!range) {
+        res.setHeader(
+          "Content-Length",
+          String(
+            stat.size
+          )
+        );
+
         const stream =
           fs.createReadStream(
             job.filePath
@@ -1905,15 +1918,7 @@ app.get(
               error.message
             );
 
-            if (
-              !res.headersSent
-            ) {
-              res
-                .status(500)
-                .end();
-            } else {
-              res.end();
-            }
+            res.end();
           }
         );
 
@@ -1922,19 +1927,25 @@ app.get(
         );
       }
 
+      /*
+       * RANGE DOWNLOAD
+       */
       const match =
         range.match(
           /bytes=(\d*)-(\d*)/
         );
 
       if (!match) {
-        return res
-          .status(416)
-          .setHeader(
-            "Content-Range",
-            `bytes */${stat.size}`
-          )
-          .end();
+        res.status(
+          416
+        );
+
+        res.setHeader(
+          "Content-Range",
+          `bytes */${stat.size}`
+        );
+
+        return res.end();
       }
 
       let start =
@@ -1962,13 +1973,16 @@ app.get(
         end < start ||
         start >= stat.size
       ) {
-        return res
-          .status(416)
-          .setHeader(
-            "Content-Range",
-            `bytes */${stat.size}`
-          )
-          .end();
+        res.status(
+          416
+        );
+
+        res.setHeader(
+          "Content-Range",
+          `bytes */${stat.size}`
+        );
+
+        return res.end();
       }
 
       end =
@@ -2022,9 +2036,7 @@ app.get(
       return stream.pipe(
         res
       );
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         `[FILE ERROR] ${job.id}`,
         error.message
@@ -2096,13 +2108,18 @@ async function startup() {
 
   console.log(
     "Max duration:",
-    MAX_VIDEO_DURATION_SECONDS,
-    "seconds"
+    MAX_VIDEO_DURATION_SECONDS
   );
 
   console.log(
-    "Max downloads:",
+    "Max concurrent downloads:",
     MAX_CONCURRENT_DOWNLOADS
+  );
+
+  console.log(
+    "File TTL:",
+    FILE_TTL_MINUTES,
+    "minutes"
   );
 
   console.log(
@@ -2111,11 +2128,15 @@ async function startup() {
   );
 
   console.log(
+    "API RATE LIMIT: DISABLED"
+  );
+
+  console.log(
     "========================================"
   );
 
   try {
-    const r =
+    const result =
       await run(
         "yt-dlp",
         ["--version"],
@@ -2127,11 +2148,9 @@ async function startup() {
 
     console.log(
       "yt-dlp version:",
-      r.stdout.trim()
+      result.stdout.trim()
     );
-  } catch (
-    error
-  ) {
+  } catch (error) {
     console.error(
       "yt-dlp error:",
       error.message
@@ -2151,9 +2170,7 @@ async function startup() {
     console.log(
       "FFmpeg tersedia."
     );
-  } catch (
-    error
-  ) {
+  } catch (error) {
     console.error(
       "FFmpeg error:",
       error.message
@@ -2171,7 +2188,7 @@ async function startup() {
       );
 
       console.log(
-        `Download URL base: ${BASE_URL}`
+        `Download base URL: ${BASE_URL}`
       );
     }
   );
