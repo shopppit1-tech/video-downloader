@@ -26,6 +26,8 @@ const jobs = new Map();
 
 let activeDownloads = 0;
 
+let youtubeCookiePath = null;
+
 /* =====================================================
    APP
 ===================================================== */
@@ -75,7 +77,7 @@ app.use(
 );
 
 /* =====================================================
-   HELPER
+   URL VALIDATION
 ===================================================== */
 
 function isValidUrl(input) {
@@ -92,7 +94,7 @@ function isValidUrl(input) {
 }
 
 /* =====================================================
-   DETECT PLATFORM
+   PLATFORM
 ===================================================== */
 
 function detectPlatform(input) {
@@ -132,48 +134,130 @@ function detectPlatform(input) {
    YOUTUBE COOKIE
 ===================================================== */
 
-function getYoutubeCookieFile() {
-  const configured =
+/*
+ * Cookie asli:
+ *
+ * /etc/secrets/youtube-cookies.txt
+ *
+ * adalah Secret File Render dan READ-ONLY.
+ *
+ * Kita salin ke:
+ *
+ * /app/temp/youtube-cookies.txt
+ *
+ * supaya yt-dlp mempunyai file yang dapat ditulis.
+ */
+
+async function prepareYoutubeCookies() {
+  const source =
     process.env.YOUTUBE_COOKIES_FILE ||
     "/etc/secrets/youtube-cookies.txt";
 
-  try {
-    if (fs.existsSync(configured)) {
-      return configured;
-    }
-  } catch {}
+  const destination =
+    path.join(
+      tempDir,
+      "youtube-cookies.txt"
+    );
 
-  return null;
+  try {
+    if (!fs.existsSync(source)) {
+      console.log(
+        "YouTube cookies: TIDAK DITEMUKAN"
+      );
+
+      youtubeCookiePath = null;
+
+      return null;
+    }
+
+    await fsp.copyFile(
+      source,
+      destination
+    );
+
+    youtubeCookiePath =
+      destination;
+
+    console.log(
+      "YouTube cookies: TERDETEKSI -> writable copy"
+    );
+
+    console.log(
+      `Cookie source: ${source}`
+    );
+
+    console.log(
+      `Cookie copy: ${destination}`
+    );
+
+    return destination;
+  } catch (error) {
+    console.error(
+      "Gagal menyalin YouTube cookies:",
+      error.message
+    );
+
+    youtubeCookiePath = null;
+
+    return null;
+  }
+}
+
+/*
+ * Pastikan cookie tersedia.
+ *
+ * Tidak menyalin ulang setiap request karena
+ * yt-dlp dapat memperbarui cookie pada copy
+ * yang writable.
+ */
+
+async function getYoutubeCookieFile() {
+  if (
+    youtubeCookiePath &&
+    fs.existsSync(
+      youtubeCookiePath
+    )
+  ) {
+    return youtubeCookiePath;
+  }
+
+  return await prepareYoutubeCookies();
 }
 
 /* =====================================================
-   BUILD YT-DLP ARGUMENTS
+   YT-DLP BASE ARGS
 ===================================================== */
 
-function buildBaseYtDlpArgs(targetUrl) {
-  const platform = detectPlatform(targetUrl);
+async function buildBaseYtDlpArgs(targetUrl) {
+  const platform =
+    detectPlatform(targetUrl);
 
   const args = [
     "--no-playlist",
     "--no-warnings",
     "--ignore-config",
-    "--no-check-certificates",
-    "--geo-bypass",
+
     "--retries",
     "3",
+
     "--fragment-retries",
     "3",
+
     "--file-access-retries",
     "3",
+
     "--extractor-retries",
     "3"
   ];
 
   /*
-   * COOKIE HANYA UNTUK YOUTUBE
+   * Cookie hanya digunakan untuk YouTube.
    */
-  if (platform === "youtube") {
-    const cookieFile = getYoutubeCookieFile();
+  if (
+    platform === "youtube"
+  ) {
+    const cookieFile =
+      await getYoutubeCookieFile();
 
     if (cookieFile) {
       args.push(
@@ -191,54 +275,70 @@ function buildBaseYtDlpArgs(targetUrl) {
 ===================================================== */
 
 function run(command, args, options = {}) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(
-      command,
-      args,
-      {
-        windowsHide: true,
-        ...options
-      }
-    );
-
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout?.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr?.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    child.on("error", (error) => {
-      reject(
-        new Error(
-          `${command} tidak tersedia: ${error.message}`
-        )
+  return new Promise(
+    (resolve, reject) => {
+      const child = spawn(
+        command,
+        args,
+        {
+          windowsHide: true,
+          ...options
+        }
       );
-    });
 
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve({
-          stdout,
-          stderr
-        });
+      let stdout = "";
+      let stderr = "";
 
-        return;
-      }
-
-      reject(
-        new Error(
-          `${command} berhenti dengan kode ${code}: ${stderr.slice(
-            -5000
-          )}`
-        )
+      child.stdout?.on(
+        "data",
+        (chunk) => {
+          stdout +=
+            chunk.toString();
+        }
       );
-    });
-  });
+
+      child.stderr?.on(
+        "data",
+        (chunk) => {
+          stderr +=
+            chunk.toString();
+        }
+      );
+
+      child.on(
+        "error",
+        (error) => {
+          reject(
+            new Error(
+              `${command} tidak tersedia: ${error.message}`
+            )
+          );
+        }
+      );
+
+      child.on(
+        "close",
+        (code) => {
+          if (code === 0) {
+            resolve({
+              stdout,
+              stderr
+            });
+
+            return;
+          }
+
+          reject(
+            new Error(
+              `${command} berhenti dengan kode ${code}: ${stderr.slice(
+                -5000
+              )}`
+            )
+          );
+        }
+      );
+    }
+  );
 }
 
 /* =====================================================
@@ -246,9 +346,10 @@ function run(command, args, options = {}) {
 ===================================================== */
 
 function publicVideoInfo(info) {
-  const formats = Array.isArray(info.formats)
-    ? info.formats
-    : [];
+  const formats =
+    Array.isArray(info.formats)
+      ? info.formats
+      : [];
 
   const heights = [
     ...new Set(
@@ -257,17 +358,29 @@ function publicVideoInfo(info) {
           (f) =>
             f.vcodec &&
             f.vcodec !== "none" &&
-            Number.isFinite(f.height)
+            Number.isFinite(
+              f.height
+            )
         )
-        .map((f) => Number(f.height))
+        .map((f) =>
+          Number(f.height)
+        )
     )
   ]
-    .filter((height) => height > 0)
-    .sort((a, b) => b - a)
+    .filter(
+      (height) =>
+        height > 0
+    )
+    .sort(
+      (a, b) =>
+        b - a
+    )
     .slice(0, 12);
 
   return {
-    id: info.id || null,
+    id:
+      info.id ||
+      null,
 
     title:
       info.title ||
@@ -278,7 +391,9 @@ function publicVideoInfo(info) {
       null,
 
     duration:
-      Number(info.duration || 0),
+      Number(
+        info.duration || 0
+      ),
 
     uploader:
       info.uploader ||
@@ -298,10 +413,12 @@ function publicVideoInfo(info) {
 }
 
 /* =====================================================
-   FILE
+   REMOVE FILE
 ===================================================== */
 
-async function removeFile(filePath) {
+async function removeFile(
+  filePath
+) {
   if (!filePath) {
     return;
   }
@@ -310,27 +427,37 @@ async function removeFile(filePath) {
     .rm(filePath, {
       force: true
     })
-    .catch((error) => {
-      console.error(
-        "Gagal menghapus file:",
-        error.message
-      );
-    });
+    .catch(
+      (error) => {
+        console.error(
+          "Gagal menghapus file:",
+          error.message
+        );
+      }
+    );
 }
 
 /* =====================================================
-   DELETE JOB
+   DELETE JOB LATER
 ===================================================== */
 
-function scheduleDeletion(jobId, filePath) {
-  const timer = setTimeout(
-    async () => {
-      await removeFile(filePath);
+function scheduleDeletion(
+  jobId,
+  filePath
+) {
+  const timer =
+    setTimeout(
+      async () => {
+        await removeFile(
+          filePath
+        );
 
-      jobs.delete(jobId);
-    },
-    fileTtlMs
-  );
+        jobs.delete(
+          jobId
+        );
+      },
+      fileTtlMs
+    );
 
   timer.unref();
 }
@@ -339,20 +466,24 @@ function scheduleDeletion(jobId, filePath) {
    INSPECT VIDEO
 ===================================================== */
 
-async function inspectVideo(targetUrl) {
-  const args = buildBaseYtDlpArgs(
-    targetUrl
-  );
+async function inspectVideo(
+  targetUrl
+) {
+  const args =
+    await buildBaseYtDlpArgs(
+      targetUrl
+    );
 
   args.push(
     "--dump-single-json",
     targetUrl
   );
 
-  const result = await run(
-    "yt-dlp",
-    args
-  );
+  const result =
+    await run(
+      "yt-dlp",
+      args
+    );
 
   return JSON.parse(
     result.stdout
@@ -363,10 +494,13 @@ async function inspectVideo(targetUrl) {
    FIND SOURCE FILE
 ===================================================== */
 
-async function findSourceFile(jobId) {
-  const files = await fsp.readdir(
-    tempDir
-  );
+async function findSourceFile(
+  jobId
+) {
+  const files =
+    await fsp.readdir(
+      tempDir
+    );
 
   const prefix =
     `${jobId}.source.`;
@@ -374,25 +508,30 @@ async function findSourceFile(jobId) {
   const candidates =
     files.filter(
       (name) =>
-        name.startsWith(prefix) &&
-        !name.endsWith(".part") &&
-        !name.endsWith(".ytdl")
+        name.startsWith(
+          prefix
+        ) &&
+        !name.endsWith(
+          ".part"
+        ) &&
+        !name.endsWith(
+          ".ytdl"
+        )
     );
 
-  if (!candidates.length) {
+  if (
+    !candidates.length
+  ) {
     return null;
   }
 
-  /*
-   * Pilih file terbesar.
-   * Ini membantu jika ada file sementara
-   * yang tertinggal.
-   */
-
   let selected = null;
+
   let selectedSize = -1;
 
-  for (const name of candidates) {
+  for (
+    const name of candidates
+  ) {
     try {
       const fullPath =
         path.join(
@@ -407,10 +546,14 @@ async function findSourceFile(jobId) {
 
       if (
         stat.isFile() &&
-        stat.size > selectedSize
+        stat.size >
+          selectedSize
       ) {
-        selected = fullPath;
-        selectedSize = stat.size;
+        selected =
+          fullPath;
+
+        selectedSize =
+          stat.size;
       }
     } catch {}
   }
@@ -419,7 +562,7 @@ async function findSourceFile(jobId) {
 }
 
 /* =====================================================
-   FFMPEG CONVERT
+   FFMPEG
 ===================================================== */
 
 async function convertToAndroidMp4(
@@ -437,20 +580,14 @@ async function convertToAndroidMp4(
     "-i",
     sourcePath,
 
-    /*
-     * Video
-     */
     "-map",
     "0:v:0",
 
-    /*
-     * Audio jika tersedia
-     */
     "-map",
     "0:a:0?",
 
     /*
-     * Android-compatible H.264
+     * H.264 / AVC
      */
     "-c:v",
     "libx264",
@@ -463,11 +600,15 @@ async function convertToAndroidMp4(
     process.env.FFMPEG_CRF ||
       "23",
 
+    /*
+     * Sangat penting untuk
+     * kompatibilitas Android.
+     */
     "-pix_fmt",
     "yuv420p",
 
     /*
-     * Audio AAC
+     * AAC
      */
     "-c:a",
     "aac",
@@ -479,13 +620,14 @@ async function convertToAndroidMp4(
     "48000",
 
     /*
-     * MP4 streaming/fast start
+     * Video mulai bisa diputar
+     * lebih cepat.
      */
     "-movflags",
     "+faststart",
 
     /*
-     * Hindari masalah timestamp
+     * Timestamp stabil.
      */
     "-vsync",
     "cfr",
@@ -509,34 +651,32 @@ async function createDownload(
   requestedHeight
 ) {
   const job =
-    jobs.get(jobId);
+    jobs.get(
+      jobId
+    );
 
   if (!job) {
     return;
   }
 
   try {
-    const height = Math.min(
-      Math.max(
-        Number(requestedHeight) ||
-          720,
-        144
-      ),
-      2160
-    );
+    const height =
+      Math.min(
+        Math.max(
+          Number(
+            requestedHeight
+          ) || 720,
+          144
+        ),
+        2160
+      );
 
-    /*
-     * File sumber.
-     */
     const sourceTemplate =
       path.join(
         tempDir,
         `${jobId}.source.%(ext)s`
       );
 
-    /*
-     * File hasil final.
-     */
     const finalPath =
       path.join(
         tempDir,
@@ -549,14 +689,14 @@ async function createDownload(
       );
 
     /*
-     * Ambil format video + audio.
-     *
      * Prioritas:
-     * H.264 / AVC
-     * AAC
      *
-     * Jika H.264 tidak tersedia,
-     * fallback ke format terbaik.
+     * 1. Video + audio sesuai resolusi
+     * 2. Video terbaik sesuai resolusi
+     * 3. Best
+     *
+     * Kemudian semuanya diubah
+     * ke H.264/AAC oleh FFmpeg.
      */
     const format =
       [
@@ -566,7 +706,7 @@ async function createDownload(
       ].join("/");
 
     const args =
-      buildBaseYtDlpArgs(
+      await buildBaseYtDlpArgs(
         targetUrl
       );
 
@@ -575,24 +715,16 @@ async function createDownload(
       format,
 
       /*
-       * Prioritaskan codec yang
-       * kompatibel dengan Android.
-       *
-       * yt-dlp mendukung format sorting
-       * berdasarkan vcodec/acodec.
+       * Prioritaskan AVC/H.264
+       * jika tersedia.
        */
       "--format-sort",
       "vcodec:h264,res,fps,acodec:aac",
 
       /*
-       * Jangan pilih HDR jika tidak perlu.
-       */
-      "--format-sort-force",
-
-      /*
-       * Jika video + audio terpisah,
-       * gabungkan sementara sebagai MKV.
-       * Nanti kita encode ulang ke MP4.
+       * Source sementara MKV.
+       * Hasil akhir akan menjadi MP4
+       * setelah FFmpeg.
        */
       "--merge-output-format",
       "mkv",
@@ -608,24 +740,22 @@ async function createDownload(
     );
 
     console.log(
-      `[DOWNLOAD] ${platform} ${targetUrl}`
+      `[DOWNLOAD] ${platform}`
     );
 
     console.log(
-      `[DOWNLOAD] target height: ${height}`
+      `[DOWNLOAD] ${targetUrl}`
     );
 
-    /*
-     * Download sumber.
-     */
+    console.log(
+      `[DOWNLOAD] height: ${height}`
+    );
+
     await run(
       "yt-dlp",
       args
     );
 
-    /*
-     * Cari hasil sumber.
-     */
     const sourcePath =
       await findSourceFile(
         jobId
@@ -638,37 +768,18 @@ async function createDownload(
     }
 
     console.log(
-      `[FFMPEG] Converting ${sourcePath} -> ${finalPath}`
+      `[FFMPEG] ${sourcePath}`
     );
 
-    /*
-     * Encode ulang agar:
-     *
-     * H.264
-     * AAC
-     * yuv420p
-     * MP4
-     * faststart
-     *
-     * kompatibel dengan
-     * mayoritas Galeri Android.
-     */
     await convertToAndroidMp4(
       sourcePath,
       finalPath
     );
 
-    /*
-     * Hapus source setelah
-     * conversion sukses.
-     */
     await removeFile(
       sourcePath
     );
 
-    /*
-     * Pastikan final benar-benar ada.
-     */
     if (
       !fs.existsSync(
         finalPath
@@ -684,14 +795,16 @@ async function createDownload(
         finalPath
       );
 
-    if (stats.size < 10000) {
+    if (
+      stats.size < 10000
+    ) {
       throw new Error(
         "File MP4 hasil terlalu kecil atau rusak."
       );
     }
 
     /*
-     * Validasi menggunakan ffprobe.
+     * Cek codec hasil.
      */
     try {
       const probe =
@@ -718,7 +831,9 @@ async function createDownload(
         "[FFPROBE]",
         probe.stdout
       );
-    } catch (probeError) {
+    } catch (
+      probeError
+    ) {
       console.error(
         "[FFPROBE] gagal:",
         probeError.message
@@ -744,14 +859,20 @@ async function createDownload(
     );
 
     console.log(
-      `[SUCCESS] ${jobId} ${stats.size} bytes`
+      `[SUCCESS] ${jobId}`
     );
-  } catch (error) {
+
+    console.log(
+      `[SUCCESS] size: ${stats.size} bytes`
+    );
+  } catch (
+    error
+  ) {
     job.status =
       "failed";
 
     job.error =
-      "Video tidak dapat diproses. Coba video lain atau ulangi beberapa saat lagi.";
+      "Video tidak dapat diproses. Coba lagi atau gunakan video lain.";
 
     console.error(
       `[FAILED] ${jobId}`
@@ -805,28 +926,39 @@ app.get(
   "/health",
   (req, res) => {
     res.json({
-      status: "ok",
+      status:
+        "ok",
+
       activeDownloads,
+
       maxConcurrentDownloads,
-      uptime: process.uptime()
+
+      uptime:
+        process.uptime()
     });
   }
 );
 
 /* =====================================================
-   VIDEO INFO
+   INFO
 ===================================================== */
 
 app.post(
   "/api/info",
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     const url =
       String(
-        req.body?.url || ""
+        req.body?.url ||
+          ""
       ).trim();
 
     if (
-      !isValidUrl(url)
+      !isValidUrl(
+        url
+      )
     ) {
       return res
         .status(400)
@@ -837,10 +969,13 @@ app.post(
     }
 
     const platform =
-      detectPlatform(url);
+      detectPlatform(
+        url
+      );
 
     if (
-      platform === "unknown"
+      platform ===
+      "unknown"
     ) {
       return res
         .status(400)
@@ -881,7 +1016,8 @@ app.post(
           .json({
             error:
               `Durasi video melebihi batas ${Math.round(
-                maxVideoDuration / 60
+                maxVideoDuration /
+                  60
               )} menit.`
           });
       }
@@ -893,7 +1029,9 @@ app.post(
 
         platform
       });
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         `[INFO FAILED] ${platform}`
       );
@@ -913,12 +1051,15 @@ app.post(
 );
 
 /* =====================================================
-   START DOWNLOAD
+   DOWNLOAD
 ===================================================== */
 
 app.post(
   "/api/download",
-  (req, res) => {
+  (
+    req,
+    res
+  ) => {
     if (
       activeDownloads >=
       maxConcurrentDownloads
@@ -933,7 +1074,8 @@ app.post(
 
     const url =
       String(
-        req.body?.url || ""
+        req.body?.url ||
+          ""
       ).trim();
 
     const height =
@@ -943,7 +1085,9 @@ app.post(
       );
 
     if (
-      !isValidUrl(url)
+      !isValidUrl(
+        url
+      )
     ) {
       return res
         .status(400)
@@ -954,10 +1098,13 @@ app.post(
     }
 
     const platform =
-      detectPlatform(url);
+      detectPlatform(
+        url
+      );
 
     if (
-      platform === "unknown"
+      platform ===
+      "unknown"
     ) {
       return res
         .status(400)
@@ -999,7 +1146,8 @@ app.post(
       }
     );
 
-    activeDownloads += 1;
+    activeDownloads +=
+      1;
 
     void createDownload(
       jobId,
@@ -1021,7 +1169,10 @@ app.post(
 
 app.get(
   "/api/jobs/:jobId",
-  (req, res) => {
+  (
+    req,
+    res
+  ) => {
     const job =
       jobs.get(
         req.params.jobId
@@ -1066,12 +1217,15 @@ app.get(
 );
 
 /* =====================================================
-   DOWNLOAD FILE
+   FILE DOWNLOAD
 ===================================================== */
 
 app.get(
   "/api/jobs/:jobId/file",
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     const job =
       jobs.get(
         req.params.jobId
@@ -1121,7 +1275,9 @@ app.get(
     res.download(
       job.filePath,
       "video.mp4",
-      async (error) => {
+      async (
+        error
+      ) => {
         if (
           error &&
           !res.headersSent
@@ -1185,7 +1341,7 @@ setInterval(
 ).unref();
 
 /* =====================================================
-   START SERVER
+   START
 ===================================================== */
 
 async function start() {
@@ -1197,7 +1353,13 @@ async function start() {
   );
 
   /*
-   * Cek dependency saat startup.
+   * Salin Secret File Render
+   * ke lokasi writable.
+   */
+  await prepareYoutubeCookies();
+
+  /*
+   * Cek yt-dlp.
    */
   try {
     const version =
@@ -1209,36 +1371,39 @@ async function start() {
     console.log(
       `yt-dlp version: ${version.stdout.trim()}`
     );
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       "yt-dlp tidak tersedia:",
       error.message
     );
   }
 
+  /*
+   * Cek FFmpeg.
+   */
   try {
-    const version =
-      await run(
-        "ffmpeg",
-        ["-version"]
-      );
+    await run(
+      "ffmpeg",
+      ["-version"]
+    );
 
     console.log(
       "FFmpeg tersedia."
     );
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       "FFmpeg tidak tersedia:",
       error.message
     );
   }
 
-  const cookieFile =
-    getYoutubeCookieFile();
-
   console.log(
     "YouTube cookies:",
-    cookieFile
+    youtubeCookiePath
       ? "TERDETEKSI"
       : "TIDAK ADA"
   );
@@ -1255,7 +1420,9 @@ async function start() {
 }
 
 start().catch(
-  (error) => {
+  (
+    error
+  ) => {
     console.error(
       error
     );
