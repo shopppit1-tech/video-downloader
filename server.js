@@ -9,25 +9,14 @@ const crypto = require("node:crypto");
 
 const app = express();
 
-/* =========================================================
-   CONFIG
-========================================================= */
-
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || "0.0.0.0";
+const BASE_URL = (process.env.BASE_URL || "https://video-downloader-soj1.onrender.com").replace(/\/+$/, "");
+const TEMP_DIR = path.join(__dirname, "temp");
+const PUBLIC_DIR = path.join(__dirname, "public");
 
-const BASE_URL = (
-  process.env.BASE_URL ||
-  "https://video-downloader-soj1.onrender.com"
-).replace(/\/+$/, "");
-
-const FILE_TTL_MINUTES = Math.max(
-  5,
-  Number(process.env.FILE_TTL_MINUTES || 30)
-);
-
-const FILE_TTL_MS =
-  FILE_TTL_MINUTES * 60 * 1000;
+const FILE_TTL_MINUTES = Math.max(5, Number(process.env.FILE_TTL_MINUTES || 30));
+const FILE_TTL_MS = FILE_TTL_MINUTES * 60 * 1000;
 
 const MAX_CONCURRENT_DOWNLOADS = Math.max(
   1,
@@ -39,21 +28,12 @@ const MAX_VIDEO_DURATION_SECONDS = Math.max(
   Number(process.env.MAX_VIDEO_DURATION_SECONDS || 7200)
 );
 
-const TEMP_DIR =
-  path.join(__dirname, "temp");
-
-const PUBLIC_DIR =
-  path.join(__dirname, "public");
-
-const YOUTUBE_COOKIE_SOURCE =
+const COOKIE_SOURCE =
   process.env.YOUTUBE_COOKIES_FILE ||
   "/etc/secrets/youtube-cookies.txt";
 
-const YOUTUBE_COOKIE_COPY =
-  path.join(
-    TEMP_DIR,
-    "youtube-cookies.txt"
-  );
+const COOKIE_COPY =
+  path.join(TEMP_DIR, "youtube-cookies.txt");
 
 const POT_BASE_URL =
   process.env.POT_BASE_URL ||
@@ -73,7 +53,10 @@ fs.mkdirSync(TEMP_DIR, {
 
 app.disable("x-powered-by");
 
-app.set("trust proxy", 1);
+app.set(
+  "trust proxy",
+  1
+);
 
 app.use(
   express.json({
@@ -92,33 +75,35 @@ app.use(
    CORS
 ========================================================= */
 
-app.use((req, res, next) => {
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    "*"
-  );
+app.use(
+  (req, res, next) => {
+    res.setHeader(
+      "Access-Control-Allow-Origin",
+      "*"
+    );
 
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET,POST,OPTIONS"
-  );
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET,POST,OPTIONS"
+    );
 
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type"
-  );
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type"
+    );
 
-  res.setHeader(
-    "Access-Control-Expose-Headers",
-    "Content-Length,Content-Disposition,Content-Type"
-  );
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "Content-Length,Content-Disposition,Content-Type"
+    );
 
-  if (req.method === "OPTIONS") {
-    return res.status(204).end();
+    if (req.method === "OPTIONS") {
+      return res.status(204).end();
+    }
+
+    next();
   }
-
-  next();
-});
+);
 
 /* =========================================================
    STATIC
@@ -138,62 +123,39 @@ app.use(
    HELPERS
 ========================================================= */
 
-function text(value, fallback = "") {
-  if (
-    value === undefined ||
-    value === null
-  ) {
-    return fallback;
-  }
-
-  return String(value);
+function str(
+  value,
+  fallback = ""
+) {
+  return value == null
+    ? fallback
+    : String(value);
 }
 
-/*
- * Bersihkan judul video untuk nama file.
- */
 function cleanFilename(value) {
-  let name = text(
+  let name = str(
     value,
     "Video"
-  );
-
-  name = name
+  )
     .replace(
       /[<>:"/\\|?*\x00-\x1F]/g,
-      ""
-    )
-    .replace(
-      /[\u0000-\u001F]/g,
       ""
     )
     .replace(
       /\s+/g,
       " "
     )
-    .trim();
+    .trim()
+    .replace(
+      /[.\s]+$/,
+      ""
+    )
+    .slice(
+      0,
+      100
+    );
 
-  /*
-   * Hilangkan titik/spasi di akhir
-   * karena Windows tidak menyukainya.
-   */
-  name = name.replace(
-    /[.\s]+$/,
-    ""
-  );
-
-  /*
-   * Maksimal 100 karakter judul.
-   */
-  name = name.slice(
-    0,
-    100
-  );
-
-  return (
-    name ||
-    "Video"
-  );
+  return name || "Video";
 }
 
 function makeShortId() {
@@ -202,29 +164,24 @@ function makeShortId() {
     .toString("hex");
 }
 
+function makeJobId() {
+  return crypto
+    .randomBytes(16)
+    .toString("hex");
+}
+
 function makeFilename(
   platform,
   title
 ) {
-  const platformName =
+  return `${
     platform === "facebook"
       ? "Facebook"
-      : "YouTube";
-
-  const cleanTitle =
-    cleanFilename(title);
-
-  const shortId =
-    makeShortId();
-
-  return (
-    `${platformName}_${cleanTitle}_${shortId}.mp4`
-  );
+      : "YouTube"
+  }_${cleanFilename(title)}_${makeShortId()}.mp4`;
 }
 
-function formatDuration(
-  seconds
-) {
+function formatDuration(seconds) {
   const total =
     Number(seconds || 0);
 
@@ -251,20 +208,22 @@ function formatDuration(
     );
 
   if (h > 0) {
-    return (
-      `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-    );
+    return `${h}:${String(m).padStart(
+      2,
+      "0"
+    )}:${String(s).padStart(
+      2,
+      "0"
+    )}`;
   }
 
-  return (
-    `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-  );
-}
-
-function makeJobId() {
-  return crypto
-    .randomBytes(16)
-    .toString("hex");
+  return `${String(m).padStart(
+    2,
+    "0"
+  )}:${String(s).padStart(
+    2,
+    "0"
+  )}`;
 }
 
 /* =========================================================
@@ -273,7 +232,7 @@ function makeJobId() {
 
 function parseVideoUrl(input) {
   const raw =
-    text(input).trim();
+    str(input).trim();
 
   if (!raw) {
     throw new Error(
@@ -307,26 +266,26 @@ function parseVideoUrl(input) {
   const host =
     url.hostname.toLowerCase();
 
-  const isYouTube =
+  const youtube =
     host === "youtube.com" ||
     host.endsWith(".youtube.com") ||
     host === "youtu.be" ||
     host.endsWith(".youtu.be");
 
-  const isFacebook =
+  const facebook =
     host === "facebook.com" ||
     host.endsWith(".facebook.com") ||
     host === "fb.watch" ||
     host.endsWith(".fb.watch");
 
-  if (isYouTube) {
+  if (youtube) {
     return {
       platform: "youtube",
       url: url.toString()
     };
   }
 
-  if (isFacebook) {
+  if (facebook) {
     return {
       platform: "facebook",
       url: url.toString()
@@ -345,7 +304,7 @@ function parseVideoUrl(input) {
 async function setupCookies() {
   try {
     await fsp.access(
-      YOUTUBE_COOKIE_SOURCE,
+      COOKIE_SOURCE,
       fs.constants.R_OK
     );
   } catch {
@@ -358,32 +317,32 @@ async function setupCookies() {
 
   try {
     await fsp.copyFile(
-      YOUTUBE_COOKIE_SOURCE,
-      YOUTUBE_COOKIE_COPY
+      COOKIE_SOURCE,
+      COOKIE_COPY
     );
 
     try {
       await fsp.chmod(
-        YOUTUBE_COOKIE_COPY,
+        COOKIE_COPY,
         0o600
       );
     } catch {}
 
     console.log(
+      "YouTube cookies: TERDETEKSI"
+    );
+
+    console.log(
       "Cookie source:",
-      YOUTUBE_COOKIE_SOURCE
+      COOKIE_SOURCE
     );
 
     console.log(
       "Cookie copy:",
-      YOUTUBE_COOKIE_COPY
+      COOKIE_COPY
     );
 
-    console.log(
-      "YouTube cookies: TERDETEKSI"
-    );
-
-    return YOUTUBE_COOKIE_COPY;
+    return COOKIE_COPY;
   } catch (error) {
     console.error(
       "Cookie copy gagal:",
@@ -398,8 +357,9 @@ async function setupCookies() {
    YT-DLP ARGS
 ========================================================= */
 
-async function baseYtDlpArgs(
-  platform
+async function ytdlpArgs(
+  platform,
+  client = "mweb"
 ) {
   const args = [
     "--no-playlist",
@@ -409,16 +369,22 @@ async function baseYtDlpArgs(
     "30",
 
     "--retries",
-    "3",
+    "2",
 
     "--fragment-retries",
-    "3",
+    "2",
 
     "--extractor-retries",
-    "3",
+    "2",
 
+    /*
+     * Lebih cepat daripada 1 fragment.
+     */
     "--concurrent-fragments",
-    "1"
+    "4",
+
+    "--buffer-size",
+    "16K"
   ];
 
   if (
@@ -441,17 +407,27 @@ async function baseYtDlpArgs(
 
     args.push(
       "--extractor-args",
-      "youtube:player_client=default,mweb"
+      `youtube:player_client=${client}`
     );
 
-    const cookieFile =
-      await setupCookies();
+    /*
+     * mweb dicoba TANPA cookies.
+     *
+     * Kalau gagal:
+     * web_embedded + cookies.
+     */
+    if (
+      client !== "mweb"
+    ) {
+      const cookie =
+        await setupCookies();
 
-    if (cookieFile) {
-      args.push(
-        "--cookies",
-        cookieFile
-      );
+      if (cookie) {
+        args.push(
+          "--cookies",
+          cookie
+        );
+      }
     }
 
     if (
@@ -512,23 +488,23 @@ function run(
       let stdout = "";
       let stderr = "";
 
-      const maxOutput =
+      const max =
         options.maxOutput ||
         40 * 1024 * 1024;
 
       child.stdout.on(
         "data",
-        chunk => {
+        data => {
           stdout +=
-            chunk.toString();
+            data.toString();
 
           if (
             stdout.length >
-            maxOutput
+            max
           ) {
             stdout =
               stdout.slice(
-                -maxOutput
+                -max
               );
           }
         }
@@ -536,23 +512,23 @@ function run(
 
       child.stderr.on(
         "data",
-        chunk => {
+        data => {
           stderr +=
-            chunk.toString();
+            data.toString();
 
           if (
             stderr.length >
-            maxOutput
+            max
           ) {
             stderr =
               stderr.slice(
-                -maxOutput
+                -max
               );
           }
         }
       );
 
-      let timer = null;
+      let timer;
 
       if (
         options.timeoutMs
@@ -571,14 +547,14 @@ function run(
                   `${command} timeout`
                 );
 
-              error.code =
-                "TIMEOUT";
-
               error.stdout =
                 stdout;
 
               error.stderr =
                 stderr;
+
+              error.code =
+                "TIMEOUT";
 
               reject(error);
             },
@@ -614,9 +590,7 @@ function run(
             );
           }
 
-          if (
-            code === 0
-          ) {
+          if (code === 0) {
             return resolve({
               stdout,
               stderr
@@ -628,14 +602,14 @@ function run(
               `${command} berhenti dengan kode ${code}`
             );
 
-          error.code =
-            code;
-
           error.stdout =
             stdout;
 
           error.stderr =
             stderr;
+
+          error.code =
+            code;
 
           reject(error);
         }
@@ -645,10 +619,89 @@ function run(
 }
 
 /* =========================================================
-   INFO
+   YOUTUBE FALLBACK
 ========================================================= */
 
-function getThumbnail(info) {
+async function youtubeRun(
+  mode,
+  extraArgs,
+  options = {}
+) {
+  let lastError =
+    null;
+
+  /*
+   * 1. mweb + PO Token
+   * 2. web_embedded + cookies
+   */
+  for (
+    const client of [
+      "mweb",
+      "web_embedded"
+    ]
+  ) {
+    try {
+      console.log(
+        `[YT ${mode}] mencoba client: ${client}`
+      );
+
+      const args =
+        await ytdlpArgs(
+          "youtube",
+          client
+        );
+
+      args.push(
+        ...extraArgs
+      );
+
+      const result =
+        await run(
+          "yt-dlp",
+          args,
+          options
+        );
+
+      console.log(
+        `[YT ${mode}] sukses dengan client: ${client}`
+      );
+
+      return result;
+    } catch (error) {
+      lastError =
+        error;
+
+      console.error(
+        `[YT ${mode}] ${client} gagal`
+      );
+
+      console.error(
+        (
+          error.stderr ||
+          error.message ||
+          ""
+        ).slice(
+          -8000
+        )
+      );
+    }
+  }
+
+  throw (
+    lastError ||
+    new Error(
+      "YouTube gagal diproses."
+    )
+  );
+}
+
+/* =========================================================
+   VIDEO INFO
+========================================================= */
+
+function getThumbnail(
+  info
+) {
   if (
     info.thumbnail
   ) {
@@ -662,44 +715,45 @@ function getThumbnail(info) {
       ""
     )
       .toLowerCase()
-      .includes("youtube")
+      .includes(
+        "youtube"
+      )
   ) {
-    return (
-      `https://i.ytimg.com/vi/${info.id}/hqdefault.jpg`
-    );
+    return `https://i.ytimg.com/vi/${info.id}/hqdefault.jpg`;
   }
 
   return null;
 }
 
-function collectQualities(info) {
+function collectQualities(
+  info
+) {
   const values =
     new Set();
 
-  if (
-    Array.isArray(
-      info.formats
-    )
+  for (
+    const format of
+      Array.isArray(
+        info.formats
+      )
+        ? info.formats
+        : []
   ) {
-    for (
-      const format of info.formats
-    ) {
-      const height =
-        Number(
-          format.height
-        );
+    const height =
+      Number(
+        format.height
+      );
 
-      if (
-        Number.isFinite(
-          height
-        ) &&
-        height >= 144 &&
-        height <= 2160
-      ) {
-        values.add(
-          height
-        );
-      }
+    if (
+      Number.isFinite(
+        height
+      ) &&
+      height >= 144 &&
+      height <= 2160
+    ) {
+      values.add(
+        height
+      );
     }
   }
 
@@ -719,16 +773,16 @@ function publicVideoInfo(
     platform,
 
     id:
-      text(info.id),
+      str(info.id),
 
     title:
-      text(
+      str(
         info.title,
         "Video"
       ),
 
     uploader:
-      text(
+      str(
         info.uploader ||
         info.channel ||
         info.creator,
@@ -737,7 +791,8 @@ function publicVideoInfo(
 
     duration:
       Number(
-        info.duration || 0
+        info.duration ||
+        0
       ),
 
     durationText:
@@ -746,23 +801,29 @@ function publicVideoInfo(
       ),
 
     thumbnail:
-      getThumbnail(info),
+      getThumbnail(
+        info
+      ),
 
     width:
       Number(
-        info.width || 0
+        info.width ||
+        0
       ),
 
     height:
       Number(
-        info.height || 0
+        info.height ||
+        0
       ),
 
     qualities:
-      collectQualities(info),
+      collectQualities(
+        info
+      ),
 
     webpageUrl:
-      text(
+      str(
         info.webpage_url ||
         info.original_url,
         ""
@@ -773,53 +834,78 @@ function publicVideoInfo(
 async function inspectVideo(
   video
 ) {
-  const args =
-    await baseYtDlpArgs(
-      video.platform
-    );
-
-  args.push(
-    "--dump-single-json",
-    "--skip-download",
-    video.url
-  );
-
   console.log(
     `[INFO] ${video.platform}: ${video.url}`
   );
 
-  try {
-    const result =
-      await run(
-        "yt-dlp",
-        args,
-        {
-          timeoutMs:
-            120000,
+  const extra = [
+    "--dump-single-json",
+    "--skip-download",
+    video.url
+  ];
 
-          maxOutput:
-            40 * 1024 * 1024
-        }
+  try {
+    let result;
+
+    if (
+      video.platform ===
+      "youtube"
+    ) {
+      result =
+        await youtubeRun(
+          "INFO",
+          extra,
+          {
+            timeoutMs:
+              120000,
+
+            maxOutput:
+              40 * 1024 * 1024
+          }
+        );
+    } else {
+      const args =
+        await ytdlpArgs(
+          video.platform
+        );
+
+      args.push(
+        ...extra
       );
+
+      result =
+        await run(
+          "yt-dlp",
+          args,
+          {
+            timeoutMs:
+              120000,
+
+            maxOutput:
+              40 * 1024 * 1024
+          }
+        );
+    }
 
     const lines =
       result.stdout
-        .split(/\r?\n/)
+        .split(
+          /\r?\n/
+        )
         .map(
-          line =>
-            line.trim()
+          x => x.trim()
         )
         .filter(Boolean);
 
     const jsonLine =
-      [...lines]
+      lines
         .reverse()
         .find(
-          line =>
-            line.startsWith(
+          x =>
+            x.startsWith(
               "{"
             ) &&
-            line.endsWith(
+            x.endsWith(
               "}"
             )
         );
@@ -843,7 +929,9 @@ async function inspectVideo(
         error.stderr ||
         error.message ||
         ""
-      ).slice(-12000)
+      ).slice(
+        -12000
+      )
     );
 
     throw error;
@@ -851,7 +939,7 @@ async function inspectVideo(
 }
 
 /* =========================================================
-   DOWNLOAD
+   QUALITY
 ========================================================= */
 
 function requestedHeight(
@@ -872,36 +960,30 @@ function requestedHeight(
     2160,
     Math.max(
       144,
-      Math.round(height)
+      Math.round(
+        height
+      )
     )
   );
 }
+
+/* =========================================================
+   DOWNLOAD SOURCE
+========================================================= */
 
 async function downloadSource(
   video,
   outputTemplate,
   height
 ) {
-  const args =
-    await baseYtDlpArgs(
-      video.platform
-    );
-
   const format = [
-    `bv*[height<=${height}][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a][ext=m4a]`,
-
-    `bv*[height<=${height}][vcodec^=avc1][ext=mp4]+ba[ext=m4a]`,
-
     `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
-
     `bv*[height<=${height}]+ba`,
-
     `b[height<=${height}]`,
-
     "b"
   ].join("/");
 
-  args.push(
+  const extra = [
     "--format",
     format,
 
@@ -916,6 +998,32 @@ async function downloadSource(
     outputTemplate,
 
     video.url
+  ];
+
+  if (
+    video.platform ===
+    "youtube"
+  ) {
+    return youtubeRun(
+      "DOWNLOAD",
+      extra,
+      {
+        timeoutMs:
+          30 * 60 * 1000,
+
+        maxOutput:
+          40 * 1024 * 1024
+      }
+    );
+  }
+
+  const args =
+    await ytdlpArgs(
+      video.platform
+    );
+
+  args.push(
+    ...extra
   );
 
   return run(
@@ -932,61 +1040,137 @@ async function downloadSource(
 }
 
 /* =========================================================
-   FFMPEG
+   FFMPEG CEPAT
 ========================================================= */
+
+async function removeFile(
+  file
+) {
+  if (!file) {
+    return;
+  }
+
+  try {
+    await fsp.unlink(
+      file
+    );
+  } catch {}
+}
 
 async function convertToMp4(
   input,
   output
 ) {
-  const args = [
-    "-y",
+  /*
+   * JALUR CEPAT:
+   * Tidak encode ulang.
+   */
+  try {
+    console.log(
+      "[FFMPEG FAST] mencoba remux/copy..."
+    );
 
-    "-hide_banner",
+    await run(
+      "ffmpeg",
+      [
+        "-y",
 
-    "-loglevel",
-    "error",
+        "-hide_banner",
 
-    "-i",
-    input,
+        "-loglevel",
+        "error",
 
-    "-map",
-    "0:v:0",
+        "-i",
+        input,
 
-    "-map",
-    "0:a:0?",
+        "-map",
+        "0:v:0",
 
-    "-c:v",
-    "libx264",
+        "-map",
+        "0:a:0?",
 
-    "-preset",
-    process.env.FFMPEG_PRESET ||
-      "veryfast",
+        "-c",
+        "copy",
 
-    "-crf",
-    String(
-      process.env.FFMPEG_CRF ||
-      "23"
-    ),
+        "-movflags",
+        "+faststart",
 
-    "-pix_fmt",
-    "yuv420p",
+        output
+      ],
+      {
+        timeoutMs:
+          15 * 60 * 1000,
 
-    "-c:a",
-    "aac",
+        maxOutput:
+          20 * 1024 * 1024
+      }
+    );
 
-    "-b:a",
-    "128k",
+    console.log(
+      "[FFMPEG FAST] selesai tanpa re-encode"
+    );
 
-    "-movflags",
-    "+faststart",
+    return;
+  } catch {
+    await removeFile(
+      output
+    );
 
-    output
-  ];
+    console.log(
+      "[FFMPEG FAST] gagal, fallback encode..."
+    );
+  }
 
-  return run(
+  /*
+   * FALLBACK:
+   * Encode hanya kalau perlu.
+   */
+  await run(
     "ffmpeg",
-    args,
+    [
+      "-y",
+
+      "-hide_banner",
+
+      "-loglevel",
+      "error",
+
+      "-i",
+      input,
+
+      "-map",
+      "0:v:0",
+
+      "-map",
+      "0:a:0?",
+
+      "-c:v",
+      "libx264",
+
+      "-preset",
+      process.env.FFMPEG_PRESET ||
+        "veryfast",
+
+      "-crf",
+      String(
+        process.env.FFMPEG_CRF ||
+        "23"
+      ),
+
+      "-pix_fmt",
+      "yuv420p",
+
+      "-c:a",
+      "aac",
+
+      "-b:a",
+      "128k",
+
+      "-movflags",
+      "+faststart",
+
+      output
+    ],
     {
       timeoutMs:
         45 * 60 * 1000,
@@ -1005,7 +1189,7 @@ async function findDownloadedFile(
   dir,
   finalPath
 ) {
-  const files =
+  const names =
     await fsp.readdir(
       dir
     );
@@ -1016,32 +1200,17 @@ async function findDownloadedFile(
     );
 
   const candidates =
-    files
+    names
       .filter(
         name =>
           name !==
           finalName
       )
       .filter(
-        name => {
-          const lower =
-            name.toLowerCase();
-
-          return (
-            lower.endsWith(
-              ".mp4"
-            ) ||
-            lower.endsWith(
-              ".mkv"
-            ) ||
-            lower.endsWith(
-              ".webm"
-            ) ||
-            lower.endsWith(
-              ".mov"
-            )
-          );
-        }
+        name =>
+          /\.(mp4|mkv|webm|mov)$/i.test(
+            name
+          )
       )
       .map(
         name =>
@@ -1051,12 +1220,6 @@ async function findDownloadedFile(
           )
       );
 
-  if (
-    !candidates.length
-  ) {
-    return null;
-  }
-
   let best =
     null;
 
@@ -1064,7 +1227,8 @@ async function findDownloadedFile(
     -1;
 
   for (
-    const file of candidates
+    const file of
+      candidates
   ) {
     try {
       const stat =
@@ -1075,7 +1239,7 @@ async function findDownloadedFile(
       if (
         stat.isFile() &&
         stat.size >
-        bestSize
+          bestSize
       ) {
         best =
           file;
@@ -1092,20 +1256,6 @@ async function findDownloadedFile(
 /* =========================================================
    CLEANUP
 ========================================================= */
-
-async function removeFile(
-  file
-) {
-  if (!file) {
-    return;
-  }
-
-  try {
-    await fsp.unlink(
-      file
-    );
-  } catch {}
-}
 
 async function cleanupJob(
   job
@@ -1223,12 +1373,15 @@ app.get(
         POT_BASE_URL,
 
       cookies:
+        false,
+
+      potPing:
         false
     };
 
     try {
       await fsp.access(
-        YOUTUBE_COOKIE_SOURCE,
+        COOKIE_SOURCE,
         fs.constants.R_OK
       );
 
@@ -1237,40 +1390,58 @@ app.get(
     } catch {}
 
     try {
-      const r =
-        await run(
-          "yt-dlp",
-          ["--version"],
-          {
-            timeoutMs:
-              15000
-          }
-        );
-
       result.ytDlp =
-        r.stdout.trim();
+        (
+          await run(
+            "yt-dlp",
+            [
+              "--version"
+            ],
+            {
+              timeoutMs:
+                15000
+            }
+          )
+        ).stdout.trim();
     } catch (error) {
       result.ytDlp =
         error.message;
     }
 
     try {
-      const r =
-        await run(
-          "ffmpeg",
-          ["-version"],
-          {
-            timeoutMs:
-              15000
-          }
-        );
-
       result.ffmpeg =
-        r.stdout
-          .split(/\r?\n/)[0];
+        (
+          await run(
+            "ffmpeg",
+            [
+              "-version"
+            ],
+            {
+              timeoutMs:
+                15000
+            }
+          )
+        )
+          .stdout
+          .split(
+            /\r?\n/
+          )[0];
     } catch (error) {
       result.ffmpeg =
         error.message;
+    }
+
+    try {
+      const response =
+        await fetch(
+          `${POT_BASE_URL}/ping`
+        );
+
+      result.potPing =
+        response.status;
+    } catch {
+      result.potPing =
+        false;
     }
 
     res.json(
@@ -1281,7 +1452,6 @@ app.get(
 
 /* =========================================================
    API INFO
-   TANPA RATE LIMIT
 ========================================================= */
 
 app.post(
@@ -1303,7 +1473,8 @@ app.post(
 
       if (
         Number(
-          info.duration || 0
+          info.duration ||
+            0
         ) >
         MAX_VIDEO_DURATION_SECONDS
       ) {
@@ -1382,33 +1553,21 @@ app.post(
         req.body?.height
       );
 
-    const jobId =
+    const id =
       makeJobId();
 
     const dir =
       path.join(
         TEMP_DIR,
-        jobId
+        id
       );
 
-    /*
-     * Kalau frontend mengirim title,
-     * pakai title tersebut.
-     *
-     * Kalau tidak, sementara gunakan
-     * "Video" dan nanti diganti
-     * setelah info didapat.
-     */
     let title =
       cleanFilename(
         req.body?.title ||
-        ""
+          ""
       );
 
-    /*
-     * Kalau title tidak dikirim,
-     * ambil judul video dari yt-dlp.
-     */
     if (
       !title ||
       title === "Video"
@@ -1422,14 +1581,9 @@ app.post(
         title =
           cleanFilename(
             info.title ||
-            "Video"
+              "Video"
           );
-      } catch (error) {
-        console.log(
-          "Tidak bisa mengambil judul awal:",
-          error.message
-        );
-
+      } catch {
         title =
           "Video";
       }
@@ -1455,8 +1609,7 @@ app.post(
     );
 
     const job = {
-      id:
-        jobId,
+      id,
 
       platform:
         video.platform,
@@ -1497,19 +1650,19 @@ app.post(
     };
 
     jobs.set(
-      jobId,
+      id,
       job
     );
 
     const downloadUrl =
-      `${BASE_URL}/api/jobs/${jobId}/file`;
+      `${BASE_URL}/api/jobs/${id}/file`;
 
     console.log(
       "========================================"
     );
 
     console.log(
-      `[JOB CREATED] ${jobId}`
+      `[JOB CREATED] ${id}`
     );
 
     console.log(
@@ -1529,17 +1682,14 @@ app.post(
     );
 
     console.log(
-      `[DOWNLOAD URL] ${downloadUrl}`
-    );
-
-    console.log(
       "========================================"
     );
 
     res.json({
       ok: true,
 
-      jobId,
+      jobId:
+        id,
 
       status:
         "queued",
@@ -1562,7 +1712,7 @@ app.post(
     ).catch(
       error => {
         console.error(
-          `[JOB FATAL] ${jobId}`,
+          `[JOB FATAL] ${id}`,
           error.message
         );
       }
@@ -1586,7 +1736,7 @@ async function processDownloadJob(
     Date.now();
 
   try {
-    const sourceTemplate =
+    const template =
       path.join(
         job.dir,
         "%(title).100B.%(ext)s"
@@ -1601,7 +1751,7 @@ async function processDownloadJob(
           job.url
       },
 
-      sourceTemplate,
+      template,
 
       job.height
     );
@@ -1684,10 +1834,6 @@ async function processDownloadJob(
     );
 
     console.log(
-      `[DOWNLOAD] ${BASE_URL}/api/jobs/${job.id}/file`
-    );
-
-    console.log(
       "========================================"
     );
   } catch (error) {
@@ -1753,14 +1899,6 @@ app.get(
       "no-store, no-cache, must-revalidate"
     );
 
-    /*
-     * status dibuat tetap "ready"
-     * ketika file selesai.
-     *
-     * Ditambahkan juga completed
-     * agar frontend dengan nama status
-     * berbeda tetap bisa membaca.
-     */
     res.json({
       ok: true,
 
@@ -1771,10 +1909,12 @@ app.get(
         job.status,
 
       completed:
-        job.status === "ready",
+        job.status ===
+        "ready",
 
       ready:
-        job.status === "ready",
+        job.status ===
+        "ready",
 
       platform:
         job.platform,
@@ -1894,9 +2034,6 @@ app.get(
       const range =
         req.headers.range;
 
-      /*
-       * DOWNLOAD NORMAL
-       */
       if (!range) {
         res.setHeader(
           "Content-Length",
@@ -1927,9 +2064,6 @@ app.get(
         );
       }
 
-      /*
-       * RANGE DOWNLOAD
-       */
       const match =
         range.match(
           /bytes=(\d*)-(\d*)/
@@ -2087,23 +2221,13 @@ async function startup() {
   );
 
   console.log(
-    "Platform:",
-    process.platform
-  );
-
-  console.log(
-    "Arch:",
-    process.arch
-  );
-
-  console.log(
     "POT server:",
     POT_BASE_URL
   );
 
   console.log(
     "Cookie source:",
-    YOUTUBE_COOKIE_SOURCE
+    COOKIE_SOURCE
   );
 
   console.log(
@@ -2132,6 +2256,18 @@ async function startup() {
   );
 
   console.log(
+    "YouTube clients: mweb -> web_embedded"
+  );
+
+  console.log(
+    "Concurrent fragments: 4"
+  );
+
+  console.log(
+    "FFmpeg: fast remux first, encode fallback"
+  );
+
+  console.log(
     "========================================"
   );
 
@@ -2139,7 +2275,9 @@ async function startup() {
     const result =
       await run(
         "yt-dlp",
-        ["--version"],
+        [
+          "--version"
+        ],
         {
           timeoutMs:
             15000
@@ -2160,7 +2298,9 @@ async function startup() {
   try {
     await run(
       "ffmpeg",
-      ["-version"],
+      [
+        "-version"
+      ],
       {
         timeoutMs:
           15000
@@ -2178,6 +2318,52 @@ async function startup() {
   }
 
   await setupCookies();
+
+  /*
+   * CEK BGUTIL
+   */
+  let potOk =
+    false;
+
+  for (
+    let i = 1;
+    i <= 10;
+    i++
+  ) {
+    try {
+      const response =
+        await fetch(
+          `${POT_BASE_URL}/ping`
+        );
+
+      if (
+        response.ok
+      ) {
+        potOk =
+          true;
+
+        console.log(
+          `[POT] provider aktif (${response.status})`
+        );
+
+        break;
+      }
+    } catch {}
+
+    await new Promise(
+      resolve =>
+        setTimeout(
+          resolve,
+          500
+        )
+    );
+  }
+
+  if (!potOk) {
+    console.error(
+      "[POT] provider tidak merespons /ping"
+    );
+  }
 
   app.listen(
     PORT,
