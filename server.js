@@ -463,24 +463,18 @@ async function ytdlpArgs(
     );
 
     /*
-     * mweb tanpa cookies.
-     *
-     * Kalau mweb gagal,
-     * otomatis fallback ke
-     * web_embedded + cookies.
+     * PO Token tidak menggantikan autentikasi cookies.
+     * IP server dapat diminta login oleh YouTube, jadi gunakan
+     * cookies pada mweb maupun fallback client jika tersedia.
      */
-    if (
-      client !== "mweb"
-    ) {
-      const cookie =
-        await setupCookies();
+    const cookie =
+      await setupCookies();
 
-      if (cookie) {
-        args.push(
-          "--cookies",
-          cookie
-        );
-      }
+    if (cookie) {
+      args.push(
+        "--cookies",
+        cookie
+      );
     }
 
     if (
@@ -686,12 +680,13 @@ async function youtubeRun(
     null;
 
   /*
-   * 1. mweb + PO Token
-   * 2. web_embedded + cookies
+   * Coba client utama dengan PO Token dan cookies, lalu fallback
+   * ke web_safari dan web_embedded untuk perbedaan dukungan video.
    */
   for (
     const client of [
       "mweb",
+      "web_safari",
       "web_embedded"
     ]
   ) {
@@ -2606,7 +2601,7 @@ async function startup() {
 
   for (
     let i = 1;
-    i <= 10;
+    i <= 40;
     i++
   ) {
     try {
@@ -2640,7 +2635,7 @@ async function startup() {
 
   if (!potOk) {
     console.error(
-      "[POT] provider tidak merespons /ping"
+      "[POT] provider tidak merespons /ping setelah 20 detik; YouTube akan dicoba tanpa jaminan PO Token"
     );
   }
 
