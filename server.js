@@ -1081,12 +1081,18 @@ async function downloadSource(
   outputTemplate,
   height
 ) {
-  const format = [
-    `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
-    `bv*[height<=${height}]+ba`,
-    `b[height<=${height}]`,
-    "b"
-  ].join("/");
+  const tiktokNoWatermarkFormat =
+    `b[height<=${height}][format_note!~="(?i)watermarked"]/b[format_note!~="(?i)watermarked"]`;
+
+  const format =
+    video.platform === "tiktok"
+      ? tiktokNoWatermarkFormat
+      : [
+          `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
+          `bv*[height<=${height}]+ba`,
+          `b[height<=${height}]`,
+          "b"
+        ].join("/");
 
   const extra = [
     "--format",
