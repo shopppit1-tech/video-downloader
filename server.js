@@ -69,6 +69,10 @@ const MAX_VIDEO_DURATION_SECONDS =
 const jobs = new Map();
 
 let activeDownloads = 0;
+let youtubeRateLimitUntil = 0;
+
+const YOUTUBE_RATE_LIMIT_COOLDOWN_MS =
+  5 * 60 * 1000;
 
 fs.mkdirSync(
   TEMP_DIR,
@@ -683,6 +687,29 @@ async function youtubeRun(
   let lastError =
     null;
 
+  if (
+    Date.now() < youtubeRateLimitUntil
+  ) {
+    const minutes =
+      Math.max(
+        1,
+        Math.ceil(
+          (youtubeRateLimitUntil - Date.now()) /
+            60000
+        )
+      );
+
+    const error =
+      new Error(
+        `YouTube sedang membatasi permintaan (HTTP 429). Coba lagi sekitar ${minutes} menit.`
+      );
+
+    error.code =
+      "YOUTUBE_RATE_LIMITED";
+
+    throw error;
+  }
+
   /*
    * Coba client utama dengan PO Token dan cookies, lalu fallback
    * ke web_safari dan web_embedded untuk perbedaan dukungan video.
@@ -729,11 +756,14 @@ async function youtubeRun(
         `[YT ${mode}] ${client} gagal`
       );
 
-      const safeDiagnostics =
+      const stderr =
         String(
           error.stderr ||
           ""
-        )
+        );
+
+      const safeDiagnostics =
+        stderr
           .split(/\r?\n/)
           .filter(
             line =>
@@ -753,6 +783,26 @@ async function youtubeRun(
           -8000
         )
       );
+
+      if (
+        /HTTP Error 429:\s*Too Many Requests/i.test(
+          stderr
+        )
+      ) {
+        youtubeRateLimitUntil =
+          Date.now() +
+          YOUTUBE_RATE_LIMIT_COOLDOWN_MS;
+
+        const rateLimitError =
+          new Error(
+            "YouTube membatasi permintaan dari server (HTTP 429). Percobaan client lain dihentikan; coba lagi setelah beberapa menit."
+          );
+
+        rateLimitError.code =
+          "YOUTUBE_RATE_LIMITED";
+
+        throw rateLimitError;
+      }
     }
   }
 
@@ -1771,10 +1821,16 @@ app.post(
       );
 
       res
-        .status(400)
+        .status(
+          error.code === "YOUTUBE_RATE_LIMITED"
+            ? 429
+            : 400
+        )
         .json({
           error:
-            "Informasi video tidak dapat diambil."
+            error.code === "YOUTUBE_RATE_LIMITED"
+              ? error.message
+              : "Informasi video tidak dapat diambil."
         });
     }
   }
@@ -2111,9 +2167,12 @@ async function processDownloadJob(
 
     job.error =
       (
-        error.stderr ||
-        error.message ||
-        "Download gagal."
+        video.platform === "youtube"
+          ? error.message ||
+            "Video YouTube tidak dapat diproses."
+          : error.stderr ||
+            error.message ||
+            "Download gagal."
       ).slice(
         -10000
       );
@@ -2514,7 +2573,7 @@ async function startup() {
   );
 
   console.log(
-    "YouTube clients: mweb -> web_embedded"
+    "YouTube clients: mweb -> web_safari -> web_embedded"
   );
 
   console.log(
