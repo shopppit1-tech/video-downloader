@@ -18,7 +18,13 @@ RUN apt-get update && \
     libgif-dev \
     librsvg2-dev \
     ca-certificates \
+    curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# Deno adalah runtime JavaScript yang direkomendasikan yt-dlp untuk YouTube.
+RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh && \
+    deno --version
 
 # PYTHON ENVIRONMENT
 RUN python3 -m venv /opt/venv
@@ -26,11 +32,13 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 ENV NODE_ENV=production
 
-# UPDATE YT-DLP
+# Pasang yt-dlp nightly, dependensi default termasuk yt-dlp-ejs,
+# dan plugin BGUtil PO Token.
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
     python3 -m pip install --no-cache-dir --upgrade --pre \
     "yt-dlp[default]" \
-    bgutil-ytdlp-pot-provider
+    bgutil-ytdlp-pot-provider && \
+    yt-dlp --version
 
 # BGUTIL PO TOKEN PROVIDER
 RUN git clone \
