@@ -22,7 +22,7 @@ RUN apt-get update && \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Deno adalah runtime JavaScript yang direkomendasikan yt-dlp untuk YouTube.
+# Runtime JavaScript yang direkomendasikan yt-dlp untuk YouTube.
 RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh && \
     deno --version
 
@@ -32,7 +32,7 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 ENV NODE_ENV=production
 
-# Pasang yt-dlp nightly, dependensi default termasuk yt-dlp-ejs,
+# yt-dlp nightly, dependensi default termasuk yt-dlp-ejs,
 # dan plugin BGUtil PO Token.
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
     python3 -m pip install --no-cache-dir --upgrade --pre \
@@ -43,16 +43,16 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip && \
 # BGUTIL PO TOKEN PROVIDER
 RUN git clone \
     --single-branch \
-    --branch 2.0.1 \
+    --branch 2.0.2 \
     https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git \
     /app/bgutil
 
 WORKDIR /app/bgutil/server
 
-# Gunakan compiler TypeScript langsung agar tidak menjalankan paket "tsc" yang salah.
-RUN npm install --include=dev && \
-    npm install --no-save typescript && \
-    node ./node_modules/typescript/bin/tsc
+# Pasang dependensi tepat dari package-lock dan compile dengan TypeScript lokal.
+RUN npm ci --include=dev && \
+    test -x node_modules/.bin/tsc && \
+    ./node_modules/.bin/tsc
 
 # MAIN APPLICATION
 WORKDIR /app
