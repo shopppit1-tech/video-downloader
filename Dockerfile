@@ -49,9 +49,10 @@ RUN git clone \
 
 WORKDIR /app/bgutil/server
 
+# Gunakan compiler TypeScript langsung agar tidak menjalankan paket "tsc" yang salah.
 RUN npm install --include=dev && \
     npm install --no-save typescript && \
-    npx tsc
+    node ./node_modules/typescript/bin/tsc
 
 # MAIN APPLICATION
 WORKDIR /app
