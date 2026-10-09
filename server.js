@@ -952,12 +952,243 @@ function publicVideoInfo(
   };
 }
 
+async function fetchTikwmData(
+  videoUrl
+) {
+  const endpoint =
+    new URL(
+      "https://www.tikwm.com/api/"
+    );
+
+  endpoint.searchParams.set(
+    "url",
+    videoUrl
+  );
+
+  const response =
+    await fetch(
+      endpoint,
+      {
+        headers: {
+          "user-agent":
+            "Mozilla/5.0 VideoFetch/1.0",
+
+          accept:
+            "application/json"
+        },
+
+        signal:
+          AbortSignal.timeout(
+            30000
+          )
+      }
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      `TikWM API merespons HTTP ${response.status}.`
+    );
+  }
+
+  const payload =
+    await response.json();
+
+  if (
+    Number(payload.code) !== 0 ||
+    !payload.data
+  ) {
+    throw new Error(
+      `TikWM gagal memproses video: ${str(payload.msg, "respons tidak valid")}`
+    );
+  }
+
+  return payload.data;
+}
+
+function getTikwmPlayUrl(
+  value
+) {
+  let url;
+
+  try {
+    url =
+      new URL(
+        value
+      );
+  } catch {
+    throw new Error(
+      "TikWM tidak menyediakan stream TikTok tanpa watermark."
+    );
+  }
+
+  const host =
+    url.hostname.toLowerCase();
+
+  const allowedHosts = [
+    "tiktokcdn.com",
+    "tiktokcdn-us.com",
+    "tiktokcdn-eu.com",
+    "tiktokcdn-in.com",
+    "tiktokv.com",
+    "tiktok.com"
+  ];
+
+  const allowed =
+    allowedHosts.some(
+      suffix =>
+        host === suffix ||
+        host.endsWith(
+          `.${suffix}`
+        )
+    );
+
+  if (
+    url.protocol !== "https:" ||
+    !allowed
+  ) {
+    throw new Error(
+      "TikWM mengembalikan alamat stream yang tidak diizinkan."
+    );
+  }
+
+  return url.toString();
+}
+
+async function downloadTikTokNoWatermark(
+  video,
+  outputTemplate
+) {
+  const data =
+    await fetchTikwmData(
+      video.url
+    );
+
+  // `play` is TikWM's clean stream; never use `wmplay`.
+  const streamUrl =
+    getTikwmPlayUrl(
+      data.play
+    );
+
+  const outputPath =
+    path.join(
+      path.dirname(
+        outputTemplate
+      ),
+      "tiktok-no-watermark.mp4"
+    );
+
+  try {
+    await run(
+      "curl",
+      [
+        "--location",
+        "--fail",
+        "--silent",
+        "--show-error",
+        "--retry",
+        "2",
+        "--retry-all-errors",
+        "--max-time",
+        "1800",
+        "--user-agent",
+        "Mozilla/5.0 VideoFetch/1.0",
+        "--referer",
+        "https://www.tiktok.com/",
+        "--output",
+        outputPath,
+        streamUrl
+      ],
+      {
+        timeoutMs:
+          30 * 60 * 1000,
+
+        maxOutput:
+          1024 * 1024
+      }
+    );
+  } catch {
+    throw new Error(
+      "Gagal mengunduh stream TikTok tanpa watermark dari CDN."
+    );
+  }
+
+  const stat =
+    await fsp.stat(
+      outputPath
+    );
+
+  if (
+    !stat.isFile() ||
+    stat.size <= 0
+  ) {
+    throw new Error(
+      "Stream TikTok tanpa watermark kosong."
+    );
+  }
+
+  return {
+    stdout: "",
+    stderr: ""
+  };
+}
+
 async function inspectVideo(
   video
 ) {
   console.log(
     `[INFO] ${video.platform}: ${video.url}`
   );
+
+  if (
+    video.platform === "tiktok"
+  ) {
+    const data =
+      await fetchTikwmData(
+        video.url
+      );
+
+    const author =
+      data.author &&
+      typeof data.author === "object"
+        ? data.author.unique_id ||
+          data.author.nickname ||
+          data.author.name
+        : data.author;
+
+    return {
+      id:
+        str(
+          data.id,
+          ""
+        ),
+
+      title:
+        str(
+          data.title,
+          "TikTok video"
+        ),
+
+      uploader:
+        str(
+          author,
+          ""
+        ),
+
+      duration:
+        Number(
+          data.duration ||
+          0
+        ),
+
+      thumbnail:
+        data.cover ||
+        data.origin_cover ||
+        data.ai_dynamic_cover ||
+        null,
+
+      formats: []
+    };
+  }
 
   const extra = [
     "--dump-single-json",
@@ -1081,18 +1312,21 @@ async function downloadSource(
   outputTemplate,
   height
 ) {
-  const tiktokNoWatermarkFormat =
-    `b[height<=${height}][format_note!~="(?i)watermarked"]/b[format_note!~="(?i)watermarked"]`;
-
-  const format =
+  if (
     video.platform === "tiktok"
-      ? tiktokNoWatermarkFormat
-      : [
-          `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
-          `bv*[height<=${height}]+ba`,
-          `b[height<=${height}]`,
-          "b"
-        ].join("/");
+  ) {
+    return downloadTikTokNoWatermark(
+      video,
+      outputTemplate
+    );
+  }
+
+  const format = [
+    `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
+    `bv*[height<=${height}]+ba`,
+    `b[height<=${height}]`,
+    "b"
+  ].join("/");
 
   const extra = [
     "--format",
