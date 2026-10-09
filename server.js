@@ -443,6 +443,10 @@ async function ytdlpArgs(
     platform === "youtube"
   ) {
     args.push(
+      "--verbose"
+    );
+
+    args.push(
       "--js-runtimes",
       "node"
     );
@@ -725,9 +729,24 @@ async function youtubeRun(
         `[YT ${mode}] ${client} gagal`
       );
 
+      const safeDiagnostics =
+        String(
+          error.stderr ||
+          ""
+        )
+          .split(/\r?\n/)
+          .filter(
+            line =>
+              /\[youtube\].*(?:player response playability status|player API JSON|login required|unplayable|PO Token Providers|Generating a (?:gvs|player|subs) PO Token)|Sign in to confirm you.?re not a bot|Failed to extract any player response|HTTP Error/i.test(
+                line
+              )
+          )
+          .slice(-30)
+          .join("\n");
+
       console.error(
         (
-          error.stderr ||
+          safeDiagnostics ||
           error.message ||
           ""
         ).slice(
