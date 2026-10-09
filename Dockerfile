@@ -41,7 +41,8 @@ RUN git clone \
 
 WORKDIR /app/bgutil/server
 
-RUN npm ci && \
+RUN npm install --include=dev && \
+    npm install --no-save typescript && \
     npx tsc
 
 # MAIN APPLICATION
