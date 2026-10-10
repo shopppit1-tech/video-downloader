@@ -39,9 +39,9 @@ const COOKIE_COPY =
   );
 
 const FILE_TTL_MINUTES = Math.max(
-  5,
+  3,
   Number(
-    process.env.FILE_TTL_MINUTES || 30
+    process.env.FILE_TTL_MINUTES || 3
   )
 );
 
@@ -54,9 +54,20 @@ const MAX_CONCURRENT_DOWNLOADS =
   Math.max(
     1,
     Number(
-      process.env.MAX_CONCURRENT_DOWNLOADS || 2
+      process.env.MAX_CONCURRENT_DOWNLOADS || 10
     )
   );
+
+const MAX_QUEUED_DOWNLOADS =
+  Math.max(
+    0,
+    Number(
+      process.env.MAX_QUEUED_DOWNLOADS || 20
+    )
+  );
+
+const CLEANUP_INTERVAL_MS =
+  30 * 1000;
 
 const MAX_VIDEO_DURATION_SECONDS =
   Math.max(
@@ -67,8 +78,10 @@ const MAX_VIDEO_DURATION_SECONDS =
   );
 
 const jobs = new Map();
+const downloadQueue = [];
 
 let activeDownloads = 0;
+let pendingAdmissions = 0;
 let youtubeRateLimitUntil = 0;
 
 const YOUTUBE_RATE_LIMIT_COOLDOWN_MS =
@@ -1830,28 +1843,30 @@ async function cleanupExpiredJobs() {
     ] of jobs
   ) {
     if (
-      now -
-        job.createdAt >
-      FILE_TTL_MS
+      !job.finishedAt ||
+      now - job.finishedAt < FILE_TTL_MS ||
+      job.activeFileStreams > 0
     ) {
-      jobs.delete(
-        id
-      );
-
-      console.log(
-        `[CLEANUP] ${id}`
-      );
-
-      await cleanupJob(
-        job
-      );
+      continue;
     }
+
+    jobs.delete(
+      id
+    );
+
+    console.log(
+      `[CLEANUP] ${id}`
+    );
+
+    await cleanupJob(
+      job
+    );
   }
 }
 
 setInterval(
   cleanupExpiredJobs,
-  5 * 60 * 1000
+  CLEANUP_INTERVAL_MS
 ).unref();
 
 /* =========================================================
@@ -2086,18 +2101,6 @@ app.post(
     req,
     res
   ) => {
-    if (
-      activeDownloads >=
-      MAX_CONCURRENT_DOWNLOADS
-    ) {
-      return res
-        .status(429)
-        .json({
-          error:
-            "Server sedang penuh. Tunggu download sebelumnya selesai."
-        });
-    }
-
     let video;
 
     try {
@@ -2118,6 +2121,20 @@ app.post(
       requestedHeight(
         req.body?.height
       );
+
+    if (
+      activeDownloads + downloadQueue.length + pendingAdmissions >=
+      MAX_CONCURRENT_DOWNLOADS + MAX_QUEUED_DOWNLOADS
+    ) {
+      return res
+        .status(429)
+        .json({
+          error:
+            "Antrean unduhan sedang penuh. Coba lagi setelah ada job selesai."
+        });
+    }
+
+    pendingAdmissions++;
 
     const id =
       makeJobId();
@@ -2167,12 +2184,18 @@ app.post(
         filename
       );
 
-    await fsp.mkdir(
-      dir,
-      {
-        recursive: true
-      }
-    );
+    try {
+      await fsp.mkdir(
+        dir,
+        {
+          recursive: true
+        }
+      );
+    } catch (error) {
+      pendingAdmissions =
+        Math.max(0, pendingAdmissions - 1);
+      throw error;
+    }
 
     const job = {
       id,
@@ -2212,13 +2235,19 @@ app.post(
         null,
 
       finishedAt:
-        null
+        null,
+
+      activeFileStreams:
+        0
     };
 
     jobs.set(
       id,
       job
     );
+
+    pendingAdmissions =
+      Math.max(0, pendingAdmissions - 1);
 
     const downloadUrl =
       `${BASE_URL}/api/jobs/${id}/file`;
@@ -2273,22 +2302,37 @@ app.post(
       downloadUrl
     });
 
-    processDownloadJob(
-      job
-    ).catch(
-      error => {
-        console.error(
-          `[JOB FATAL] ${id}`,
-          error.message
-        );
-      }
-    );
+    downloadQueue.push(job);
+    dispatchDownloadQueue();
   }
 );
 
 /* =========================================================
    PROCESS DOWNLOAD
 ========================================================= */
+
+function dispatchDownloadQueue() {
+  while (
+    activeDownloads < MAX_CONCURRENT_DOWNLOADS &&
+    downloadQueue.length > 0
+  ) {
+    const job =
+      downloadQueue.shift();
+
+    if (!job || !jobs.has(job.id)) {
+      continue;
+    }
+
+    processDownloadJob(job).catch(
+      error => {
+        console.error(
+          `[JOB FATAL] ${job.id}`,
+          error.message
+        );
+      }
+    );
+  }
+}
 
 async function processDownloadJob(
   job
@@ -2430,6 +2474,8 @@ async function processDownloadJob(
         0,
         activeDownloads - 1
       );
+
+    dispatchDownloadQueue();
   }
 }
 
@@ -2514,6 +2560,48 @@ app.get(
 /* =========================================================
    FILE DOWNLOAD
 ========================================================= */
+
+function streamJobFile(job, res, options) {
+  job.activeFileStreams =
+    (job.activeFileStreams || 0) + 1;
+
+  const stream =
+    fs.createReadStream(
+      job.filePath,
+      options
+    );
+
+  let released = false;
+
+  const release = () => {
+    if (released) {
+      return;
+    }
+
+    released = true;
+    job.activeFileStreams =
+      Math.max(0, job.activeFileStreams - 1);
+  };
+
+  stream.once("close", release);
+  stream.once("error", error => {
+    release();
+    console.error(
+      `[FILE STREAM ERROR] ${job.id}`,
+      error.message
+    );
+
+    if (!res.headersSent) {
+      res.status(404).json({
+        error: "File sudah tidak tersedia."
+      });
+    } else {
+      res.destroy(error);
+    }
+  });
+
+  return stream.pipe(res);
+}
 
 app.get(
   "/api/jobs/:jobId/file",
@@ -2626,13 +2714,10 @@ app.get(
           )
         );
 
-        return fs
-          .createReadStream(
-            job.filePath
-          )
-          .pipe(
-            res
-          );
+        return streamJobFile(
+          job,
+          res
+        );
       }
 
       /*
@@ -2720,17 +2805,14 @@ app.get(
         )
       );
 
-      return fs
-        .createReadStream(
-          job.filePath,
-          {
-            start,
-            end
-          }
-        )
-        .pipe(
-          res
-        );
+      return streamJobFile(
+        job,
+        res,
+        {
+          start,
+          end
+        }
+      );
     } catch (error) {
       console.error(
         `[FILE ERROR] ${job.id}`,
@@ -2802,9 +2884,20 @@ async function startup() {
   );
 
   console.log(
+    "Max queued downloads:",
+    MAX_QUEUED_DOWNLOADS
+  );
+
+  console.log(
     "File TTL:",
     FILE_TTL_MINUTES,
     "minutes"
+  );
+
+  console.log(
+    "Cleanup interval:",
+    CLEANUP_INTERVAL_MS / 1000,
+    "seconds"
   );
 
   console.log(
