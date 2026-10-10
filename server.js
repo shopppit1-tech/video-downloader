@@ -1335,6 +1335,8 @@ async function downloadSource(
   }
 
   const format = [
+    `bv[height<=${height}][vcodec^=avc1]+ba[ext=m4a]`,
+    `b[height<=${height}][vcodec^=avc1]`,
     `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]`,
     `bv*[height<=${height}]+ba`,
     `b[height<=${height}]`,
