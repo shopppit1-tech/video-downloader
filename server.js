@@ -508,12 +508,18 @@ async function ytdlpArgs(
     }
   }
 
+  const proxyUrl =
+    platform === "youtube"
+      ? process.env.YOUTUBE_HTTP_PROXY ||
+        process.env.HTTP_PROXY
+      : process.env.HTTP_PROXY;
+
   if (
-    process.env.HTTP_PROXY
+    proxyUrl
   ) {
     args.push(
       "--proxy",
-      process.env.HTTP_PROXY
+      proxyUrl
     );
   }
 
