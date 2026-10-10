@@ -85,7 +85,7 @@ let pendingAdmissions = 0;
 let youtubeRateLimitUntil = 0;
 
 const YOUTUBE_RATE_LIMIT_COOLDOWN_MS =
-  5 * 60 * 1000;
+  1 * 60 * 1000;
 
 fs.mkdirSync(
   TEMP_DIR,
@@ -808,7 +808,7 @@ async function youtubeRun(
 
         const rateLimitError =
           new Error(
-            "YouTube membatasi permintaan dari server (HTTP 429). Percobaan client lain dihentikan; coba lagi setelah beberapa menit."
+            "YouTube membatasi permintaan dari server (HTTP 429). Percobaan client lain dihentikan; coba lagi setelah sekitar 1 menit."
           );
 
         rateLimitError.code =
