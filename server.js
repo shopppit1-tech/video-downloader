@@ -2451,7 +2451,7 @@ async function processDownloadJob(
 
     job.error =
       (
-        job.platform === "youtube"
+        video.platform === "youtube"
           ? error.message ||
             "Video YouTube tidak dapat diproses."
           : error.stderr ||
