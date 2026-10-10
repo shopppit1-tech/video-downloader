@@ -2147,32 +2147,11 @@ app.post(
         id
       );
 
-    let title =
+    const title =
       cleanFilename(
         req.body?.title ||
-          ""
+          "Video"
       );
-
-    if (
-      !title ||
-      title === "Video"
-    ) {
-      try {
-        const info =
-          await inspectVideo(
-            video
-          );
-
-        title =
-          cleanFilename(
-            info.title ||
-              "Video"
-          );
-      } catch {
-        title =
-          "Video";
-      }
-    }
 
     /*
      * Nama file TIDAK menggunakan title.
