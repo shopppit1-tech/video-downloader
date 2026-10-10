@@ -741,6 +741,19 @@
       transform: none;
     }
 
+    .cancel-auto-download-btn {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 8px;
+      border: 1px solid rgba(255,255,255,.24);
+      border-radius: 12px;
+      background: rgba(16,36,67,.8);
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
     /* =====================================================
        INFO
     ====================================================== */
@@ -1201,6 +1214,15 @@
         ↓ &nbsp; Unduh MP4
       </button>
 
+      <button
+        id="cancelAutoDownloadBtn"
+        class="cancel-auto-download-btn"
+        type="button"
+        style="display:none;"
+      >
+        Batalkan auto-unduh
+      </button>
+
 
       <div class="ad-box bottom-ad">
 
@@ -1372,6 +1394,9 @@ const checkBtn =
 const downloadBtn =
   document.getElementById("downloadBtn");
 
+const cancelAutoDownloadBtn =
+  document.getElementById("cancelAutoDownloadBtn");
+
 const quality =
   document.getElementById("quality");
 
@@ -1412,6 +1437,8 @@ let currentVideoId = "";
 let currentVideoUrl = "";
 
 let currentPlatform = "";
+
+let autoDownloadTimer = null;
 
 let deferredInstallPrompt = null;
 
@@ -1508,6 +1535,8 @@ urlInput.addEventListener(
   "input",
   function() {
 
+    cancelAutoDownloadCountdown();
+
     clearUrl.style.display =
       urlInput.value.trim()
         ? "block"
@@ -1579,6 +1608,92 @@ function hideStatus() {
 /* =====================================================
    PARSE URL
 ===================================================== */
+
+function cancelAutoDownloadCountdown() {
+
+  if (autoDownloadTimer !== null) {
+
+    clearInterval(
+      autoDownloadTimer
+    );
+
+    autoDownloadTimer =
+      null;
+
+  }
+
+  cancelAutoDownloadBtn.style.display =
+    "none";
+
+}
+
+
+function startAutoDownloadCountdown() {
+
+  cancelAutoDownloadCountdown();
+
+  let seconds =
+    9;
+
+  cancelAutoDownloadBtn.style.display =
+    "block";
+
+  showStatus(
+    "Unduh otomatis dalam " +
+      seconds +
+      " detik. Anda masih bisa memilih kualitas atau menekan Unduh MP4.",
+    "success"
+  );
+
+  autoDownloadTimer =
+    setInterval(
+      function() {
+
+        seconds -= 1;
+
+        if (seconds <= 0) {
+
+          cancelAutoDownloadCountdown();
+
+          showStatus(
+            "Waktu habis. Unduhan dimulai otomatis...",
+            "loading"
+          );
+
+          downloadBtn.click();
+
+          return;
+
+        }
+
+        showStatus(
+          "Unduh otomatis dalam " +
+            seconds +
+            " detik. Anda masih bisa memilih kualitas atau menekan Unduh MP4.",
+          "success"
+        );
+
+      },
+      1000
+    );
+
+}
+
+
+cancelAutoDownloadBtn.addEventListener(
+  "click",
+  function() {
+
+    cancelAutoDownloadCountdown();
+
+    showStatus(
+      "Auto-unduh dibatalkan. Tekan Unduh MP4 jika ingin mulai manual.",
+      "success"
+    );
+
+  }
+);
+
 
 function parseVideoUrl(
   input
@@ -1839,6 +1954,8 @@ function formatDuration(
 ===================================================== */
 
 function resetVideo() {
+
+  cancelAutoDownloadCountdown();
 
   currentVideoId =
     "";
@@ -2207,6 +2324,8 @@ checkBtn.addEventListener(
         "success"
       );
 
+      startAutoDownloadCountdown();
+
 
     } catch (
       error
@@ -2239,6 +2358,8 @@ checkBtn.addEventListener(
 downloadBtn.addEventListener(
   "click",
   async function() {
+
+    cancelAutoDownloadCountdown();
 
     const videoUrl =
       urlInput.value.trim();
