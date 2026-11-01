@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoTube Studio — Unduh Video</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/index.css">
+<style>
+  * { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+  body { background: #0a0a0f; overflow-x: hidden; }
+  .glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+  .gradient-red { background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%); }
+  .gradient-purple { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); }
+  .gradient-blue { background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); }
+  .gradient-green { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+  .gradient-orange { background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); }
+  .glow-red { box-shadow: 0 0 30px rgba(255,0,0,0.3); }
+  .scrollbar::-webkit-scrollbar { width: 6px; }
+  .scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+  .scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+  @keyframes pulse-red { 0%,100% { box-shadow: 0 0 0 0 rgba(255,0,0,0.4); } 50% { box-shadow: 0 0 0 10px rgba(255,0,0,0); } }
+  .pulse-red { animation: pulse-red 2s infinite; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .slide-in { animation: slideIn 0.4s ease-out; }
+  @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+  .slide-in-left { animation: slideInLeft 0.3s ease-out; }
+  .nav-item { transition: all 0.2s; }
+  .nav-item:hover { background: rgba(255,255,255,0.05); }
+  .nav-item.active { background: rgba(255,0,0,0.1); border-left: 3px solid #ff0000; }
+  .card-hover { transition: all 0.3s; }
+  .card-hover:hover { transform: translateY(-4px); border-color: rgba(255,0,0,0.3); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .status-online { background: #10b981; box-shadow: 0 0 8px #10b981; }
+  .status-offline { background: #6b7280; }
+  .status-processing { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; animation: pulse-red 1.5s infinite; }
+  
+  /* Sidebar & Overlay */
+  .sidebar { transition: transform 0.3s ease; }
+  .overlay { transition: opacity 0.3s ease; }
+  @media (max-width: 1023px) {
+    .sidebar { transform: translateX(-100%); position: fixed; z-index: 50; }
+    .sidebar.open { transform: translateX(0); }
+    .main-content { margin-left: 0 !important; }
+  }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  
+  /* Bottom Nav Mobile */
+  @media (max-width: 767px) {
+    .bottom-nav { display: flex !important; }
+    main { padding-bottom: 80px; }
+  }
+  
+  /* Touch-friendly */
+  @media (max-width: 767px) {
+    button, a, select, input, textarea { min-height: 44px; }
+    .touch-target { min-height: 44px; min-width: 44px; }
+  }
+</style>
+</head>
+<body class="text-white min-h-screen">
+
+<!-- Mobile Overlay -->
+<div id="overlay" onclick="toggleSidebar()" class="overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-40 opacity-0 pointer-events-none lg:hidden"></div>
+
+<div class="flex min-h-screen">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar w-64 glass border-r border-white/10 flex flex-col h-screen lg:fixed lg:sticky top-0">
+    <div class="p-4 sm:p-6 border-b border-white/10 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 gradient-red rounded-xl flex items-center justify-center glow-red flex-shrink-0">
+          <svg class="w-6 h-6" fill="white" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg">AutoTube</h1>
+          <p class="text-xs text-gray-400 hidden sm:block">AI Video Generator</p>
+        </div>
+      </div>
+      <button onclick="toggleSidebar()" class="lg:hidden p-2 hover:bg-white/10 rounded-lg touch-target">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <nav class="flex-1 p-3 sm:p-4 space-y-1 overflow-y-auto scrollbar">
+      <button onclick="showPage('dashboard')" class="nav-item active w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-left" data-page="dashboard">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        <span class="text-sm sm:text-base">Dashboard</span>
+      </button>
+      <button onclick="showPage('generator')" class="nav-item w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-left" data-page="generator">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <span class="text-sm sm:text-base">Generator Konten</span>
+      </button>
+      <button onclick="showPage('queue')" class="nav-item w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-left" data-page="queue">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        <span class="text-sm sm:text-base flex-1 text-left">Antrian Upload</span>
+        <span id="queueBadge" class="bg-red-500 text-xs px-2 py-0.5 rounded-full hidden">0</span>
+      </button>
+      <button onclick="showPage('history')" class="nav-item w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-left" data-page="history">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="text-sm sm:text-base">Riwayat</span>
+      </button>
+      <button onclick="showPage('templates')" class="nav-item w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-left" data-page="templates">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-1a1 1 0 01-1-1v-6z"/></svg>
+        <span class="text-sm sm:text-base">Template</span>
+      </button>
+      <button onclick="showPage('download')" class="nav-item w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-left" data-page="download">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+        <span class="text-sm sm:text-base">Unduh Video</span>
+      </button>
+      <button onclick="showPage('settings')" class="nav-item w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-left" data-page="settings">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span class="text-sm sm:text-base">Pengaturan</span>
+      </button>
+    </nav>
+
+    <div class="p-3 sm:p-4 border-t border-white/10">
+      <a href="/" class="w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-sm text-gray-300 hover:bg-white/10 transition" aria-label="Kembali ke halaman Unduh Video">
+        <span aria-hidden="true">←</span><span>Kembali ke Unduh Video</span>
+      </a>
+    </div>
+    <div class="p-3 sm:p-4 border-t border-white/10 hidden lg:block">
+      <div class="glass rounded-xl p-3 sm:p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="status-dot status-online"></span>
+          <span class="text-xs text-gray-400">Status Sistem</span>
+        </div>
+        <p class="text-sm font-medium text-green-400">Online & Aktif</p>
+        <p class="text-xs text-gray-500 mt-1">Server berjalan normal</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content flex-1 lg:ml-64 min-w-0">
+    <!-- Top Bar -->
+    <header class="glass border-b border-white/10 px-4 sm:px-6 lg:px-8 py-3 sm:py-4 sticky top-0 z-30 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0 flex-1">
+        <button onclick="toggleSidebar()" class="lg:hidden p-2 hover:bg-white/10 rounded-lg touch-target flex-shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="min-w-0">
+          <h2 id="pageTitle" class="text-base sm:text-xl font-bold truncate">Dashboard</h2>
+          <p id="pageSubtitle" class="text-xs sm:text-sm text-gray-400 truncate">Ringkasan aktivitas sistem</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+        <div class="hidden md:flex items-center gap-2 glass px-3 py-2 rounded-full">
+          <span class="status-dot status-online"></span>
+          <span class="text-xs sm:text-sm">YouTube</span>
+        </div>
+        <div class="w-9 h-9 sm:w-10 sm:h-10 gradient-purple rounded-full flex items-center justify-center font-bold text-sm sm:text-base">A</div>
+      </div>
+    </header>
+
+    <div class="mx-4 sm:mx-6 lg:mx-8 mt-4 sm:mt-6 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-xs sm:text-sm text-amber-100" role="status">
+      <strong>Mode demo:</strong> fitur generator AI dan unggah pada AutoTube masih simulasi antarmuka, belum terhubung ke layanan AI atau YouTube. Halaman Unduh Video hanya menerima tautan file video langsung yang diizinkan.
+    </div>
+
+    <!-- Dashboard Page -->
+    <div id="page-dashboard" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 slide-in">
+      <!-- Stats Grid -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover">
+          <div class="flex items-center justify-between mb-3 sm:mb-4">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 gradient-red rounded-lg sm:rounded-xl flex items-center justify-center">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+            <span class="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded-full">+12%</span>
+          </div>
+          <p class="text-xl sm:text-2xl lg:text-3xl font-bold" id="statVideos">0</p>
+          <p class="text-xs sm:text-sm text-gray-400 mt-1">Total Video</p>
+        </div>
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover">
+          <div class="flex items-center justify-between mb-3 sm:mb-4">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 gradient-blue rounded-lg sm:rounded-xl flex items-center justify-center">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <span class="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded-full">+28%</span>
+          </div>
+          <p class="text-xl sm:text-2xl lg:text-3xl font-bold" id="statViews">0</p>
+          <p class="text-xs sm:text-sm text-gray-400 mt-1">Total Views</p>
+        </div>
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover">
+          <div class="flex items-center justify-between mb-3 sm:mb-4">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 gradient-green rounded-lg sm:rounded-xl flex items-center justify-center">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <span class="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded-full">+45%</span>
+          </div>
+          <p class="text-xl sm:text-2xl lg:text-3xl font-bold" id="statSubs">0</p>
+          <p class="text-xs sm:text-sm text-gray-400 mt-1">Subscribers</p>
+        </div>
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover col-span-2 sm:col-span-1">
+          <div class="flex items-center justify-between mb-3 sm:mb-4">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 gradient-orange rounded-lg sm:rounded-xl flex items-center justify-center">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <span class="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded-full">+8%</span>
+          </div>
+          <p class="text-xl sm:text-2xl lg:text-3xl font-bold">$<span id="statRevenue">0</span></p>
+          <p class="text-xs sm:text-sm text-gray-400 mt-1">Estimasi Revenue</p>
+        </div>
+      </div>
+
+      <!-- Quick Actions & Activity -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div class="lg:col-span-2 glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4 sm:mb-6">
+            <h3 class="font-bold text-base sm:text-lg">Aktivitas Terbaru</h3>
+            <button onclick="showPage('history')" class="text-xs sm:text-sm text-red-400 hover:text-red-300">Lihat Semua →</button>
+          </div>
+          <div id="recentActivity" class="space-y-2 sm:space-y-3">
+            <div class="text-center py-8 text-gray-500">
+              <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+              <p class="text-sm">Belum ada aktivitas</p>
+              <p class="text-xs mt-1">Mulai generate video pertama Anda</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h3 class="font-bold text-base sm:text-lg mb-4">Aksi Cepat</h3>
+          <div class="space-y-2 sm:space-y-3">
+            <button onclick="showPage('generator')" class="w-full gradient-red rounded-xl p-3 sm:p-4 font-semibold hover:opacity-90 transition flex items-center gap-3 glow-red text-sm sm:text-base">
+              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span>Generate Video Baru</span>
+            </button>
+            <button onclick="processQueue()" class="w-full glass rounded-xl p-3 sm:p-4 font-semibold hover:bg-white/10 transition flex items-center gap-3 text-sm sm:text-base">
+              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Proses Antrian</span>
+            </button>
+            <button onclick="showPage('templates')" class="w-full glass rounded-xl p-3 sm:p-4 font-semibold hover:bg-white/10 transition flex items-center gap-3 text-sm sm:text-base">
+              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"/></svg>
+              <span>Pilih Template</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Status -->
+      <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+        <h3 class="font-bold text-base sm:text-lg mb-4">Status Sistem</h3>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div class="flex items-center gap-2 sm:gap-3">
+            <span class="status-dot status-online flex-shrink-0"></span>
+            <div class="min-w-0">
+              <p class="text-xs sm:text-sm font-medium truncate">YouTube API</p>
+              <p class="text-xs text-gray-500">Terhubung</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 sm:gap-3">
+            <span class="status-dot status-online flex-shrink-0"></span>
+            <div class="min-w-0">
+              <p class="text-xs sm:text-sm font-medium truncate">AI Engine</p>
+              <p class="text-xs text-gray-500">Aktif</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 sm:gap-3">
+            <span class="status-dot status-online flex-shrink-0"></span>
+            <div class="min-w-0">
+              <p class="text-xs sm:text-sm font-medium truncate">Renderer</p>
+              <p class="text-xs text-gray-500">Standby</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 sm:gap-3">
+            <span class="status-dot status-online flex-shrink-0"></span>
+            <div class="min-w-0">
+              <p class="text-xs sm:text-sm font-medium truncate">Storage</p>
+              <p class="text-xs text-gray-500">45%</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generator Page -->
+    <div id="page-generator" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
+          <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+            <h3 class="font-bold text-base sm:text-lg mb-4">Informasi Video</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Judul Video</label>
+                <input id="videoTitle" type="text" placeholder="Contoh: 10 Fakta Menarik..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none transition text-sm sm:text-base">
+                <button onclick="generateTitle()" class="mt-2 text-xs text-red-400 hover:text-red-300 flex items-center gap-1 py-2">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                  Generate dengan AI
+                </button>
+              </div>
+              <div>
+                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Deskripsi</label>
+                <textarea id="videoDesc" rows="4" placeholder="Deskripsi video..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none transition resize-none text-sm sm:text-base"></textarea>
+                <button onclick="generateDescription()" class="mt-2 text-xs text-red-400 hover:text-red-300 flex items-center gap-1 py-2">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                  Generate dengan AI
+                </button>
+              </div>
+              <div>
+                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Tags</label>
+                <input id="videoTags" type="text" placeholder="fakta, edukasi, sains" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none transition text-sm sm:text-base">
+              </div>
+            </div>
+          </div>
+
+          <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <h3 class="font-bold text-base sm:text-lg">Script Konten</h3>
+              <button onclick="generateScript()" class="gradient-red px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                Generate Script Otomatis
+              </button>
+            </div>
+            <textarea id="videoScript" rows="8" sm:rows="10" placeholder="Tulis script atau generate otomatis..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none transition resize-none font-mono text-xs sm:text-sm"></textarea>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mt-3 text-xs text-gray-400 gap-1">
+              <span id="scriptStats">0 karakter • 0 kata • ~0 menit durasi</span>
+              <span class="hidden sm:inline">Estimasi durasi dari kecepatan baca normal</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div class="space-y-4 sm:space-y-6">
+          <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+            <h3 class="font-bold text-base sm:text-lg mb-4">Pengaturan Video</h3>
+            <div class="space-y-3 sm:space-y-4">
+              <div>
+                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Template</label>
+                <select id="videoTemplate" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+                  <option value="facts">🎯 Fakta Menarik</option>
+                  <option value="top10">🏆 Top 10</option>
+                  <option value="story">📖 Cerita / Storytelling</option>
+                  <option value="tutorial">📚 Tutorial</option>
+                  <option value="news">📰 Berita</option>
+                  <option value="shorts">⚡ YouTube Shorts</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Voice / Narator</label>
+                <select id="videoVoice" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+                  <option value="id-male-1">🎙️ Pria Indonesia (Andi)</option>
+                  <option value="id-female-1">🎙️ Wanita Indonesia (Sari)</option>
+                  <option value="en-male-1">🎙️ English Male (John)</option>
+                  <option value="en-female-1">🎙️ English Female (Emma)</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Durasi Target</label>
+                <select id="videoDuration" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+                  <option value="60">⚡ 1 Menit (Shorts)</option>
+                  <option value="300" selected>📺 5 Menit</option>
+                  <option value="600">📺 10 Menit</option>
+                  <option value="900">📺 15 Menit</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Kualitas</label>
+                <select id="videoQuality" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+                  <option value="720">720p HD</option>
+                  <option value="1080" selected>1080p Full HD</option>
+                  <option value="4k">4K Ultra HD</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Musik Latar</label>
+                <select id="videoMusic" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+                  <option value="none">Tidak ada</option>
+                  <option value="cinematic" selected>🎵 Cinematic</option>
+                  <option value="upbeat">🎵 Upbeat</option>
+                  <option value="chill">🎵 Chill / Lo-fi</option>
+                  <option value="dramatic">🎵 Dramatic</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Visibilitas</label>
+                <select id="videoVisibility" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+                  <option value="public">🌍 Publik</option>
+                  <option value="unlisted">🔗 Tidak Publik</option>
+                  <option value="private">🔒 Privat</option>
+                  <option value="schedule">⏰ Terjadwal</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+            <h3 class="font-bold text-base sm:text-lg mb-4">Thumbnail</h3>
+            <div id="thumbnailPreview" class="aspect-video bg-gradient-to-br from-red-600 via-purple-600 to-blue-600 rounded-xl flex items-center justify-center mb-3">
+              <span class="text-white/50 text-xs sm:text-sm">Preview Thumbnail</span>
+            </div>
+            <button onclick="generateThumbnail()" class="w-full glass rounded-xl py-3 text-xs sm:text-sm hover:bg-white/10 transition">
+              🎨 Generate Thumbnail AI
+            </button>
+          </div>
+
+          <div class="space-y-2 sm:space-y-3">
+            <button onclick="addToQueue()" class="w-full gradient-red rounded-xl py-3 sm:py-4 font-bold hover:opacity-90 transition glow-red flex items-center justify-center gap-2 text-sm sm:text-base">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Tambahkan ke Antrian
+            </button>
+            <button onclick="generateAndUpload()" class="w-full gradient-purple rounded-xl py-3 sm:py-4 font-bold hover:opacity-90 transition flex items-center justify-center gap-2 text-sm sm:text-base">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              Generate & Upload Sekarang
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Queue Page -->
+    <div id="page-queue" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 hidden">
+      <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+          <div>
+            <h3 class="font-bold text-base sm:text-lg">Antrian Upload</h3>
+            <p class="text-xs sm:text-sm text-gray-400">Video yang siap diproses</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="processQueue()" class="gradient-red px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:opacity-90 transition flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg>
+              <span class="hidden sm:inline">Proses Semua</span>
+              <span class="sm:hidden">Proses</span>
+            </button>
+            <button onclick="clearQueue()" class="glass px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm hover:bg-white/10 transition">
+              Kosongkan
+            </button>
+          </div>
+        </div>
+        <div id="queueList" class="space-y-2 sm:space-y-3">
+          <div class="text-center py-12 text-gray-500">
+            <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+            <p class="text-sm">Antrian kosong</p>
+            <p class="text-xs mt-1">Tambahkan video dari halaman Generator</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Page -->
+    <div id="page-history" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 hidden">
+      <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+          <div>
+            <h3 class="font-bold text-base sm:text-lg">Riwayat Upload</h3>
+            <p class="text-xs sm:text-sm text-gray-400">Semua video yang telah diupload</p>
+          </div>
+          <button onclick="clearHistory()" class="glass px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm hover:bg-white/10 transition self-start sm:self-auto">
+            Hapus Riwayat
+          </button>
+        </div>
+        <div id="historyList" class="space-y-2 sm:space-y-3">
+          <div class="text-center py-12 text-gray-500">
+            <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="text-sm">Belum ada riwayat</p>
+            <p class="text-xs mt-1">Video yang berhasil diupload akan muncul di sini</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Templates Page -->
+    <div id="page-templates" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 hidden">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover cursor-pointer" onclick="useTemplate('facts')">
+          <div class="aspect-video gradient-red rounded-xl mb-3 sm:mb-4 flex items-center justify-center">
+            <span class="text-4xl sm:text-5xl">🎯</span>
+          </div>
+          <h4 class="font-bold mb-1 text-sm sm:text-base">Fakta Menarik</h4>
+          <p class="text-xs sm:text-sm text-gray-400 mb-3">Video fakta-fakta unik dengan visual menarik</p>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-500">5-10 menit</span>
+            <span class="text-green-400">Populer</span>
+          </div>
+        </div>
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover cursor-pointer" onclick="useTemplate('top10')">
+          <div class="aspect-video gradient-orange rounded-xl mb-3 sm:mb-4 flex items-center justify-center">
+            <span class="text-4xl sm:text-5xl">🏆</span>
+          </div>
+          <h4 class="font-bold mb-1 text-sm sm:text-base">Top 10</h4>
+          <p class="text-xs sm:text-sm text-gray-400 mb-3">Format listicle dengan countdown</p>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-500">8-15 menit</span>
+            <span class="text-green-400">Trending</span>
+          </div>
+        </div>
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover cursor-pointer" onclick="useTemplate('story')">
+          <div class="aspect-video gradient-purple rounded-xl mb-3 sm:mb-4 flex items-center justify-center">
+            <span class="text-4xl sm:text-5xl">📖</span>
+          </div>
+          <h4 class="font-bold mb-1 text-sm sm:text-base">Storytelling</h4>
+          <p class="text-xs sm:text-sm text-gray-400 mb-3">Cerita naratif dengan alur menarik</p>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-500">10-20 menit</span>
+            <span class="text-blue-400">Baru</span>
+          </div>
+        </div>
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover cursor-pointer" onclick="useTemplate('tutorial')">
+          <div class="aspect-video gradient-blue rounded-xl mb-3 sm:mb-4 flex items-center justify-center">
+            <span class="text-4xl sm:text-5xl">📚</span>
+          </div>
+          <h4 class="font-bold mb-1 text-sm sm:text-base">Tutorial</h4>
+          <p class="text-xs sm:text-sm text-gray-400 mb-3">Panduan langkah demi langkah</p>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-500">5-15 menit</span>
+            <span class="text-green-400">Populer</span>
+          </div>
+        </div>
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover cursor-pointer" onclick="useTemplate('news')">
+          <div class="aspect-video bg-gradient-to-br from-gray-700 to-gray-900 rounded-xl mb-3 sm:mb-4 flex items-center justify-center">
+            <span class="text-4xl sm:text-5xl">📰</span>
+          </div>
+          <h4 class="font-bold mb-1 text-sm sm:text-base">Berita</h4>
+          <p class="text-xs sm:text-sm text-gray-400 mb-3">Update berita terkini dengan narasi</p>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-500">3-8 menit</span>
+            <span class="text-yellow-400">Cepat</span>
+          </div>
+        </div>
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover cursor-pointer" onclick="useTemplate('shorts')">
+          <div class="aspect-video bg-gradient-to-br from-pink-500 to-red-500 rounded-xl mb-3 sm:mb-4 flex items-center justify-center">
+            <span class="text-4xl sm:text-5xl">⚡</span>
+          </div>
+          <h4 class="font-bold mb-1 text-sm sm:text-base">YouTube Shorts</h4>
+          <p class="text-xs sm:text-sm text-gray-400 mb-3">Video vertikal pendek viral</p>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-500">15-60 detik</span>
+            <span class="text-red-400">Viral</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Download Video Page -->
+    <div id="page-download" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 hidden">
+      <section class="glass rounded-2xl p-5 sm:p-8">
+        <div class="max-w-3xl mx-auto">
+          <div class="flex items-start gap-4 mb-6">
+            <div class="w-12 h-12 gradient-red rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg sm:text-xl">Unduh Video</h3>
+              <p class="text-sm text-gray-400 mt-1">Simpan video dari tautan file langsung yang memang boleh Anda unduh.</p>
+            </div>
+          </div>
+
+          <label for="downloadUrl" class="text-sm text-gray-300 mb-2 block">Tautan file video</label>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <input id="downloadUrl" type="url" inputmode="url" placeholder="https://contoh.com/video.mp4" class="flex-1 min-w-0 bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:border-red-500 focus:outline-none text-sm" autocomplete="url">
+            <button onclick="checkDownloadUrl()" class="gradient-red rounded-xl px-5 py-3 font-semibold hover:opacity-90 transition whitespace-nowrap">Periksa Tautan</button>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">Format file langsung yang dikenali: MP4, WebM, MOV, M4V, dan OGV.</p>
+
+          <div id="downloadMessage" class="hidden mt-5 rounded-xl border p-4 text-sm" role="status" aria-live="polite"></div>
+          <div id="downloadPreviewWrap" class="hidden mt-5">
+            <p class="text-sm font-semibold mb-2">Pratinjau</p>
+            <video id="downloadPreview" class="w-full max-h-[420px] bg-black rounded-xl" controls playsinline preload="metadata"></video>
+            <a id="downloadLink" class="mt-4 inline-flex items-center justify-center gap-2 gradient-green rounded-xl px-5 py-3 font-semibold hover:opacity-90 transition" href="#" target="_blank" rel="noopener noreferrer" download>
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+              Buka / Unduh File
+            </a>
+            <p class="text-xs text-gray-500 mt-3">Jika unduhan tidak dimulai, browser atau server sumber mungkin membatasi unduhan lintas situs. Gunakan fitur simpan yang disediakan pemilik sumber.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="glass rounded-2xl p-5 sm:p-6">
+        <h3 class="font-bold mb-3">Catatan penggunaan</h3>
+        <ul class="space-y-2 text-sm text-gray-400 list-disc pl-5">
+          <li>Halaman ini menerima URL file video langsung, bukan tautan halaman tontonan.</li>
+          <li>Tautan YouTube, TikTok, Instagram, dan layanan sejenis tidak diunduh di sini. Gunakan opsi unduh resmi dari platform atau pemilik konten.</li>
+          <li>Jangan mengunduh atau membagikan konten yang tidak Anda miliki izinnya.</li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- Settings Page -->
+    <div id="page-settings" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h3 class="font-bold text-base sm:text-lg mb-4">🔑 YouTube API</h3>
+          <div class="space-y-3 sm:space-y-4">
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">API Key</label>
+              <input id="apiKey" type="password" placeholder="AIza..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Client ID</label>
+              <input id="clientId" type="text" placeholder="xxxx.apps.googleusercontent.com" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Client Secret</label>
+              <input id="clientSecret" type="password" placeholder="••••••••" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+            </div>
+            <button onclick="connectYouTube()" class="w-full gradient-red rounded-xl py-3 font-semibold hover:opacity-90 transition text-sm sm:text-base">
+              Hubungkan Akun YouTube
+            </button>
+          </div>
+        </div>
+
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h3 class="font-bold text-base sm:text-lg mb-4">🤖 AI Engine</h3>
+          <div class="space-y-3 sm:space-y-4">
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Provider AI</label>
+              <select class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+                <option>OpenAI GPT-4</option>
+                <option>Anthropic Claude</option>
+                <option>Google Gemini</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">API Key AI</label>
+              <input type="password" placeholder="sk-..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Text-to-Speech</label>
+              <select class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+                <option>ElevenLabs</option>
+                <option>Google TTS</option>
+                <option>Azure Speech</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Image Generation</label>
+              <select class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+                <option>DALL-E 3</option>
+                <option>Midjourney</option>
+                <option>Stable Diffusion</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h3 class="font-bold text-base sm:text-lg mb-4">⏰ Jadwal Otomatis</h3>
+          <div class="space-y-3 sm:space-y-4">
+            <div class="flex items-center justify-between py-2">
+              <span class="text-xs sm:text-sm">Aktifkan Auto-Upload</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="autoUpload" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+              </label>
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Frekuensi Upload</label>
+              <select class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+                <option>Setiap hari</option>
+                <option>2x sehari</option>
+                <option>3x sehari</option>
+                <option>Setiap minggu</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Waktu Upload (WIB)</label>
+              <input type="time" value="19:00" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Niche / Topik</label>
+              <input type="text" placeholder="fakta unik, sains, teknologi" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+            </div>
+          </div>
+        </div>
+
+        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h3 class="font-bold text-base sm:text-lg mb-4">🎨 Branding</h3>
+          <div class="space-y-3 sm:space-y-4">
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Nama Channel</label>
+              <input type="text" placeholder="Channel Saya" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Watermark</label>
+              <input type="text" placeholder="@channel" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Intro Text</label>
+              <input type="text" placeholder="Halo semuanya..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Outro Text</label>
+              <input type="text" placeholder="Jangan lupa subscribe..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-base sm:text-lg">💾 Simpan Pengaturan</h3>
+            <p class="text-xs sm:text-sm text-gray-400">Pastikan semua konfigurasi tersimpan</p>
+          </div>
+          <button onclick="saveSettings()" class="gradient-red px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition text-sm sm:text-base">
+            Simpan Pengaturan
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Bottom Navigation (Mobile Only) -->
+<nav class="bottom-nav hidden fixed bottom-0 left-0 right-0 glass border-t border-white/10 z-40 px-2 py-2 justify-around items-center">
+  <button onclick="showPage('dashboard')" class="flex flex-col items-center gap-1 p-2 rounded-lg text-red-400 flex-1" data-bottom="dashboard">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+    <span class="text-[10px]">Home</span>
+  </button>
+  <button onclick="showPage('generator')" class="flex flex-col items-center gap-1 p-2 rounded-lg text-gray-400 flex-1" data-bottom="generator">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+    <span class="text-[10px]">Generate</span>
+  </button>
+  <button onclick="showPage('download')" class="flex flex-col items-center gap-1 p-2 rounded-lg text-gray-400 flex-1" data-bottom="download">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+    <span class="text-[10px]">Unduh</span>
+  </button>
+  <button onclick="showPage('queue')" class="flex flex-col items-center gap-1 p-2 rounded-lg text-gray-400 flex-1 relative" data-bottom="queue">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+    <span class="text-[10px]">Antrian</span>
+    <span id="queueBadgeBottom" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full hidden">0</span>
+  </button>
+  <button onclick="showPage('history')" class="flex flex-col items-center gap-1 p-2 rounded-lg text-gray-400 flex-1" data-bottom="history">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <span class="text-[10px]">Riwayat</span>
+  </button>
+  <button onclick="showPage('settings')" class="flex flex-col items-center gap-1 p-2 rounded-lg text-gray-400 flex-1" data-bottom="settings">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+    <span class="text-[10px]">Setting</span>
+  </button>
+</nav>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed bottom-20 sm:bottom-6 left-4 right-4 sm:left-6 sm:right-6 sm:w-auto sm:max-w-sm glass rounded-xl p-3 sm:p-4 flex items-center gap-3 hidden z-50 slide-in">
+  <div id="toastIcon" class="w-9 h-9 sm:w-10 sm:h-10 gradient-green rounded-lg flex items-center justify-center flex-shrink-0">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+  </div>
+  <div class="min-w-0 flex-1">
+    <p id="toastTitle" class="font-semibold text-xs sm:text-sm truncate">Berhasil</p>
+    <p id="toastMessage" class="text-xs text-gray-400 truncate">Pesan notifikasi</p>
+  </div>
+</div>
+
+<script>
+  // State
+  let queue = JSON.parse(localStorage.getItem('autotube_queue') || '[]');
+  let history = JSON.parse(localStorage.getItem('autotube_history') || '[]');
+  let stats = JSON.parse(localStorage.getItem('autotube_stats') || '{"videos":0,"views":12450,"subs":342,"revenue":45}');
+
+  const sampleTitles = {
+    facts: ["10 Fakta Mengejutkan Tentang Otak Manusia", "7 Fenomena Alam Paling Misterius", "Fakta Gila Tentang Hiu", "12 Rahasia Laut Dalam"],
+    top10: ["TOP 10 Penemuan Teknologi Terbesar", "TOP 10 Tempat Misterius di Bumi", "TOP 10 Hewan Paling Berbahaya", "TOP 10 Kota Termahal 2026"],
+    story: ["Kisah Nyata: Petualangan Menyelamatkan Hewan", "Cerita Inspiratif: Dari Nol Hingga Sukses", "Misteri Peradaban Kuno"],
+    tutorial: ["Cara Membuat Website dalam 10 Menit", "Tutorial Belajar Coding dari Nol", "Panduan Fotografi Pemula"],
+    news: ["Update Terkini: Penemuan Baru Dunia", "Berita Sains: Terobosan Terbaru"],
+    shorts: ["Fakta 30 Detik yang Bikin Kaget! 🤯", "Life Hack Mengubah Hidupmu ⚡", "Tahukah Kamu? Fakta Gila 60 Detik"]
+  };
+
+  const sampleDescriptions = [
+    "Di video kali ini, kita akan membahas fakta-fakta menarik yang jarang diketahui.\n\n🔔 Aktifkan lonceng notifikasi\n👍 Like jika bermanfaat\n💬 Tulis komentar\n\n#fakta #edukasi #sains",
+    "Selamat datang! Video ini akan memberikan wawasan baru.\n\n📌 Timestamp:\n00:00 Intro\n00:30 Pembahasan\n08:00 Kesimpulan\n\n#viral #trending",
+    "Hai semuanya! Kita akan mengupas tuntas topik menarik.\n\n🎯 Support channel:\n• Subscribe\n• Share\n• Komen\n\n#youtube #indonesia"
+  ];
+
+  const sampleScripts = [
+    "[INTRO - 0:00]\nHalo semuanya! Hari ini kita akan membahas sesuatu yang sangat menarik.\n\n[PEMBAHASAN 1 - 0:30]\nFakta pertama... Hal ini sangat mengejutkan karena banyak orang tidak menyadarinya.\n\n[PEMBAHASAN 2 - 2:00]\nMasih berkaitan dengan topik kita, ada fakta lain yang tidak kalah menarik.\n\n[KESIMPULAN - 7:00]\nItulah fakta menarik hari ini. Mana yang paling mengejutkan?\n\n[OUTRO - 8:00]\nJangan lupa like, subscribe, dan aktifkan lonceng!"
+  ];
+
+  function checkDownloadUrl() {
+    const input = document.getElementById('downloadUrl');
+    const message = document.getElementById('downloadMessage');
+    const previewWrap = document.getElementById('downloadPreviewWrap');
+    const preview = document.getElementById('downloadPreview');
+    const downloadLink = document.getElementById('downloadLink');
+    const raw = input.value.trim();
+
+    preview.pause();
+    preview.removeAttribute('src');
+    preview.load();
+    previewWrap.classList.add('hidden');
+    message.className = 'mt-5 rounded-xl border p-4 text-sm';
+
+    if (!raw) {
+      message.classList.add('border-red-500/30', 'bg-red-500/10', 'text-red-200');
+      message.textContent = 'Masukkan tautan file video terlebih dahulu.';
+      return;
+    }
+
+    let url;
+    try {
+      url = new URL(raw);
+      if (!['http:', 'https:'].includes(url.protocol)) throw new Error('protocol');
+    } catch (_) {
+      message.classList.add('border-red-500/30', 'bg-red-500/10', 'text-red-200');
+      message.textContent = 'Tautan tidak valid. Masukkan URL lengkap yang diawali http:// atau https://.';
+      return;
+    }
+
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    const platformHosts = ['youtube.com', 'youtu.be', 'tiktok.com', 'instagram.com', 'facebook.com', 'vimeo.com'];
+    const isPlatformPage = platformHosts.some(domain => host === domain || host.endsWith('.' + domain));
+    if (isPlatformPage) {
+      message.classList.add('border-yellow-500/30', 'bg-yellow-500/10', 'text-yellow-100');
+      message.textContent = 'Ini tautan halaman platform, bukan URL file video langsung. Gunakan fitur unduh resmi dari platform atau pemilik konten.';
+      return;
+    }
+
+    const isVideoFile = /\.(mp4|webm|mov|m4v|ogv)(?:$)/i.test(url.pathname);
+    if (!isVideoFile) {
+      message.classList.add('border-yellow-500/30', 'bg-yellow-500/10', 'text-yellow-100');
+      message.textContent = 'URL sudah terbaca, tetapi ekstensi file video langsung tidak dikenali. Pastikan tautan mengarah ke file MP4, WebM, MOV, M4V, atau OGV.';
+      return;
+    }
+
+    message.classList.add('border-green-500/30', 'bg-green-500/10', 'text-green-100');
+    message.textContent = 'Tautan file video dikenali. Anda dapat melihat pratinjau atau mencoba membukanya untuk mengunduh.';
+    preview.src = url.href;
+    previewWrap.classList.remove('hidden');
+    downloadLink.href = url.href;
+    downloadLink.setAttribute('download', decodeURIComponent(url.pathname.split('/').pop() || 'video'));
+  }
+
+  function init() {
+    updateStats();
+    renderQueue();
+    renderHistory();
+    renderRecentActivity();
+    updateQueueBadge();
+    loadSettings();
+  }
+
+  function updateStats() {
+    document.getElementById('statVideos').textContent = stats.videos;
+    document.getElementById('statViews').textContent = stats.views.toLocaleString('id-ID');
+    document.getElementById('statSubs').textContent = stats.subs.toLocaleString('id-ID');
+    document.getElementById('statRevenue').textContent = stats.revenue;
+  }
+
+  function showPage(page) {
+    document.querySelectorAll('[id^="page-"]').forEach(p => p.classList.add('hidden'));
+    const pageEl = document.getElementById('page-' + page);
+    pageEl.classList.remove('hidden');
+    pageEl.classList.add('slide-in');
+    
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const navBtn = document.querySelector(`[data-page="${page}"]`);
+    if (navBtn) navBtn.classList.add('active');
+    
+    // Update bottom nav
+    document.querySelectorAll('[data-bottom]').forEach(b => {
+      b.classList.remove('text-red-400');
+      b.classList.add('text-gray-400');
+    });
+    const bottomBtn = document.querySelector(`[data-bottom="${page}"]`);
+    if (bottomBtn) {
+      bottomBtn.classList.remove('text-gray-400');
+      bottomBtn.classList.add('text-red-400');
+    }
+    
+    const titles = {
+      dashboard: ['Dashboard', 'Ringkasan aktivitas sistem'],
+      generator: ['Generator Konten', 'Buat video otomatis dengan AI'],
+      queue: ['Antrian Upload', 'Kelola video yang siap diupload'],
+      history: ['Riwayat', 'Semua video yang telah diupload'],
+      templates: ['Template', 'Pilih template video'],
+      settings: ['Pengaturan', 'Konfigurasi sistem dan API'],
+      download: ['Unduh Video', 'Unduh file video langsung yang Anda miliki izinnya']
+    };
+    document.getElementById('pageTitle').textContent = titles[page][0];
+    document.getElementById('pageSubtitle').textContent = titles[page][1];
+    
+    // Close sidebar on mobile
+    if (window.innerWidth < 1024) {
+      closeSidebar();
+    }
+    
+    window.scrollTo(0, 0);
+  }
+
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('open');
+  }
+
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+  }
+
+  function showToast(title, message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const icon = document.getElementById('toastIcon');
+    document.getElementById('toastTitle').textContent = title;
+    document.getElementById('toastMessage').textContent = message;
+    
+    icon.className = 'w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0';
+    if (type === 'success') icon.classList.add('gradient-green');
+    else if (type === 'error') icon.classList.add('gradient-red');
+    else icon.classList.add('gradient-blue');
+    
+    toast.classList.remove('hidden');
+    clearTimeout(window.toastTimeout);
+    window.toastTimeout = setTimeout(() => toast.classList.add('hidden'), 3000);
+  }
+
+  function generateTitle() {
+    const template = document.getElementById('videoTemplate').value;
+    const titles = sampleTitles[template] || sampleTitles.facts;
+    document.getElementById('videoTitle').value = titles[Math.floor(Math.random() * titles.length)];
+    showToast('AI Generate', 'Judul berhasil dibuat');
+  }
+
+  function generateDescription() {
+    document.getElementById('videoDesc').value = sampleDescriptions[Math.floor(Math.random() * sampleDescriptions.length)];
+    showToast('AI Generate', 'Deskripsi berhasil dibuat');
+  }
+
+  function generateScript() {
+    document.getElementById('videoScript').value = sampleScripts[Math.floor(Math.random() * sampleScripts.length)];
+    updateScriptStats();
+    showToast('AI Generate', 'Script berhasil dibuat');
+  }
+
+  function updateScriptStats() {
+    const script = document.getElementById('videoScript').value;
+    const chars = script.length;
+    const words = script.trim() ? script.trim().split(/\s+/).length : 0;
+    const minutes = Math.round(words / 150);
+    document.getElementById('scriptStats').textContent = `${chars} karakter • ${words} kata • ~${minutes} menit`;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const script = document.getElementById('videoScript');
+    if (script) script.addEventListener('input', updateScriptStats);
+    const downloadUrl = document.getElementById('downloadUrl');
+    if (downloadUrl) downloadUrl.addEventListener('keydown', event => {
+      if (event.key === 'Enter') checkDownloadUrl();
+    });
+  });
+
+  function generateThumbnail() {
+    const colors = ['from-red-600 via-purple-600 to-blue-600', 'from-yellow-500 via-red-500 to-pink-500', 'from-green-500 via-teal-500 to-blue-500', 'from-purple-600 via-pink-500 to-red-500'];
+    const preview = document.getElementById('thumbnailPreview');
+    preview.className = `aspect-video bg-gradient-to-br ${colors[Math.floor(Math.random() * colors.length)]} rounded-xl flex items-center justify-center mb-3`;
+    preview.innerHTML = '<span class="text-white font-bold text-sm sm:text-lg">✨ Thumbnail AI Generated</span>';
+    showToast('AI Generate', 'Thumbnail berhasil dibuat');
+  }
+
+  function addToQueue() {
+    const title = document.getElementById('videoTitle').value;
+    if (!title) {
+      showToast('Error', 'Judul video harus diisi', 'error');
+      return;
+    }
+    
+    const video = {
+      id: Date.now(),
+      title: title,
+      template: document.getElementById('videoTemplate').value,
+      voice: document.getElementById('videoVoice').value,
+      duration: document.getElementById('videoDuration').value,
+      quality: document.getElementById('videoQuality').value,
+      visibility: document.getElementById('videoVisibility').value,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+    
+    queue.push(video);
+    saveQueue();
+    renderQueue();
+    updateQueueBadge();
+    showToast('Berhasil', 'Video ditambahkan ke antrian');
+    
+    document.getElementById('videoTitle').value = '';
+    document.getElementById('videoDesc').value = '';
+    document.getElementById('videoScript').value = '';
+    updateScriptStats();
+  }
+
+  function generateAndUpload() {
+    const title = document.getElementById('videoTitle').value;
+    if (!title) {
+      showToast('Error', 'Judul video harus diisi', 'error');
+      return;
+    }
+    
+    const video = {
+      id: Date.now(),
+      title: title,
+      template: document.getElementById('videoTemplate').value,
+      duration: document.getElementById('videoDuration').value,
+      quality: document.getElementById('videoQuality').value,
+      status: 'processing',
+      createdAt: new Date().toISOString()
+    };
+    
+    queue.push(video);
+    saveQueue();
+    renderQueue();
+    updateQueueBadge();
+    showPage('queue');
+    showToast('Memproses', 'Sedang generate dan upload...');
+    setTimeout(() => processQueue(), 500);
+  }
+
+  function processQueue() {
+    if (queue.length === 0) {
+      showToast('Info', 'Antrian kosong', 'info');
+      return;
+    }
+    
+    const pendingVideos = queue.filter(v => v.status === 'pending' || v.status === 'processing');
+    if (pendingVideos.length === 0) {
+      showToast('Info', 'Tidak ada video perlu diproses', 'info');
+      return;
+    }
+    
+    pendingVideos.forEach((video, index) => {
+      video.status = 'processing';
+      setTimeout(() => {
+        video.status = 'uploaded';
+        video.uploadedAt = new Date().toISOString();
+        video.views = Math.floor(Math.random() * 1000);
+        video.likes = Math.floor(Math.random() * 100);
+        
+        stats.videos++;
+        stats.views += video.views;
+        stats.subs += Math.floor(Math.random() * 10);
+        stats.revenue += Math.floor(video.views * 0.003);
+        
+        history.unshift(video);
+        queue = queue.filter(v => v.id !== video.id);
+        
+        saveQueue();
+        saveHistory();
+        saveStats();
+        renderQueue();
+        renderHistory();
+        renderRecentActivity();
+        updateStats();
+        updateQueueBadge();
+        
+        if (index === pendingVideos.length - 1) {
+          showToast('Selesai', `${pendingVideos.length} video berhasil diupload`);
+        }
+      }, 2000 + (index * 1500));
+    });
+    
+    renderQueue();
+  }
+
+  function removeFromQueue(id) {
+    queue = queue.filter(v => v.id !== id);
+    saveQueue();
+    renderQueue();
+    updateQueueBadge();
+    showToast('Dihapus', 'Video dihapus dari antrian');
+  }
+
+  function clearQueue() {
+    if (queue.length === 0) return;
+    if (confirm('Yakin ingin mengosongkan antrian?')) {
+      queue = [];
+      saveQueue();
+      renderQueue();
+      updateQueueBadge();
+      showToast('Dihapus', 'Antrian dikosongkan');
+    }
+  }
+
+  function clearHistory() {
+    if (history.length === 0) return;
+    if (confirm('Yakin ingin menghapus semua riwayat?')) {
+      history = [];
+      saveHistory();
+      renderHistory();
+      renderRecentActivity();
+      showToast('Dihapus', 'Riwayat dikosongkan');
+    }
+  }
+
+  function renderQueue() {
+    const list = document.getElementById('queueList');
+    if (queue.length === 0) {
+      list.innerHTML = `<div class="text-center py-12 text-gray-500">
+        <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+        <p class="text-sm">Antrian kosong</p>
+        <p class="text-xs mt-1">Tambahkan video dari Generator</p>
+      </div>`;
+      return;
+    }
+    
+    const statusColors = { pending: 'bg-gray-500/20 text-gray-300', processing: 'bg-yellow-500/20 text-yellow-300', uploaded: 'bg-green-500/20 text-green-300' };
+    const statusText = { pending: 'Menunggu', processing: 'Memproses...', uploaded: 'Terupload' };
+    const statusDot = { pending: 'status-offline', processing: 'status-processing', uploaded: 'status-online' };
+    
+    list.innerHTML = queue.map(v => `
+      <div class="glass rounded-xl p-3 sm:p-4 flex items-center gap-3 slide-in">
+        <div class="w-12 h-12 sm:w-16 sm:h-10 gradient-red rounded-lg flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-xs sm:text-sm truncate">${v.title}</p>
+          <div class="flex flex-wrap items-center gap-2 text-[10px] sm:text-xs text-gray-400 mt-1">
+            <span>📹 ${v.quality || 1080}p</span>
+            <span>⏱️ ${Math.round(v.duration/60)}m</span>
+            <span class="hidden sm:inline">🎨 ${v.template}</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <span class="status-dot ${statusDot[v.status]} hidden sm:inline-block"></span>
+          <span class="text-[10px] sm:text-xs px-2 py-1 rounded-full ${statusColors[v.status]}">${statusText[v.status]}</span>
+        </div>
+        ${v.status === 'pending' ? `<button onclick="removeFromQueue(${v.id})" class="text-red-400 hover:text-red-300 p-2 touch-target flex-shrink-0">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+        </button>` : ''}
+      </div>
+    `).join('');
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    if (history.length === 0) {
+      list.innerHTML = `<div class="text-center py-12 text-gray-500">
+        <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <p class="text-sm">Belum ada riwayat</p>
+        <p class="text-xs mt-1">Video yang berhasil diupload akan muncul di sini</p>
+      </div>`;
+      return;
+    }
+    
+    list.innerHTML = history.map(v => {
+      const date = new Date(v.uploadedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+      return `
+        <div class="glass rounded-xl p-3 sm:p-4 flex items-center gap-3 slide-in">
+          <div class="w-16 h-12 sm:w-20 sm:h-12 gradient-red rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-xs sm:text-sm truncate">${v.title}</p>
+            <div class="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-400 mt-1">
+              <span>📅 ${date}</span>
+              <span>👁️ ${v.views?.toLocaleString('id-ID') || 0}</span>
+              <span class="hidden sm:inline">👍 ${v.likes || 0}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="status-dot status-online hidden sm:inline-block"></span>
+            <span class="text-[10px] sm:text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-300">✓</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderRecentActivity() {
+    const container = document.getElementById('recentActivity');
+    if (history.length === 0) {
+      container.innerHTML = `<div class="text-center py-8 text-gray-500">
+        <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        <p class="text-sm">Belum ada aktivitas</p>
+        <p class="text-xs mt-1">Mulai generate video pertama Anda</p>
+      </div>`;
+      return;
+    }
+    
+    container.innerHTML = history.slice(0, 5).map(v => {
+      const date = new Date(v.uploadedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+      return `
+        <div class="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg hover:bg-white/5 transition">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 gradient-red rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs sm:text-sm font-medium truncate">${v.title}</p>
+            <p class="text-[10px] sm:text-xs text-gray-500">${date}</p>
+          </div>
+          <span class="text-[10px] sm:text-xs text-green-400 flex-shrink-0">+${v.views || 0}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function updateQueueBadge() {
+    const badge = document.getElementById('queueBadge');
+    const badgeBottom = document.getElementById('queueBadgeBottom');
+    if (queue.length > 0) {
+      badge.textContent = queue.length;
+      badge.classList.remove('hidden');
+      if (badgeBottom) {
+        badgeBottom.textContent = queue.length;
+        badgeBottom.classList.remove('hidden');
+      }
+    } else {
+      badge.classList.add('hidden');
+      if (badgeBottom) badgeBottom.classList.add('hidden');
+    }
+  }
+
+  function useTemplate(template) {
+    showPage('generator');
+    document.getElementById('videoTemplate').value = template;
+    const titles = sampleTitles[template] || sampleTitles.facts;
+    document.getElementById('videoTitle').value = titles[0];
+    showToast('Template Dipilih', `Template "${template}" dipilih`);
+  }
+
+  function connectYouTube() {
+    const key = document.getElementById('apiKey').value;
+    if (!key) {
+      showToast('Error', 'API Key harus diisi', 'error');
+      return;
+    }
+    showToast('Berhasil', 'Terhubung ke YouTube API');
+  }
+
+  function saveSettings() {
+    const settings = {
+      apiKey: document.getElementById('apiKey').value,
+      clientId: document.getElementById('clientId').value,
+      clientSecret: document.getElementById('clientSecret').value,
+      autoUpload: document.getElementById('autoUpload').checked
+    };
+    localStorage.setItem('autotube_settings', JSON.stringify(settings));
+    showToast('Tersimpan', 'Pengaturan berhasil disimpan');
+  }
+
+  function loadSettings() {
+    const settings = JSON.parse(localStorage.getItem('autotube_settings') || '{}');
+    if (settings.apiKey) document.getElementById('apiKey').value = settings.apiKey;
+    if (settings.clientId) document.getElementById('clientId').value = settings.clientId;
+    if (settings.clientSecret) document.getElementById('clientSecret').value = settings.clientSecret;
+    if (settings.autoUpload) document.getElementById('autoUpload').checked = settings.autoUpload;
+  }
+
+  function saveQueue() { localStorage.setItem('autotube_queue', JSON.stringify(queue)); }
+  function saveHistory() { localStorage.setItem('autotube_history', JSON.stringify(history)); }
+  function saveStats() { localStorage.setItem('autotube_stats', JSON.stringify(stats)); }
+
+  // Close sidebar on resize to desktop
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 1024) {
+      closeSidebar();
+    }
+  });
+
+  init();
+</script>
+
+</body>
+</html>
