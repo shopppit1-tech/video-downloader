@@ -60,6 +60,21 @@
 </head>
 <body class="text-white min-h-screen">
 
+<div id="loginOverlay" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/95 p-4">
+  <form onsubmit="submitLogin(event)" class="glass w-full max-w-md rounded-2xl border border-white/10 p-6 sm:p-8">
+    <div class="mb-5 flex items-center gap-3">
+      <div class="w-11 h-11 gradient-red rounded-xl flex items-center justify-center font-bold">AT</div>
+      <div><h2 class="text-xl font-bold">AutoTube terkunci</h2><p class="text-sm text-gray-400">Masukkan kata sandi akses yang disimpan di Render.</p></div>
+    </div>
+    <label for="loginPassword" class="mb-2 block text-sm text-gray-300">Kata sandi</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" required class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white focus:border-red-500 focus:outline-none" placeholder="Kata sandi AutoTube">
+    <p id="loginMessage" class="mt-3 hidden text-sm text-red-300"></p>
+    <button id="loginButton" class="mt-4 w-full gradient-red rounded-xl py-3 font-semibold">Masuk</button>
+    <p class="mt-4 text-xs text-gray-500">Jika kata sandi belum disiapkan, tambahkan <code>AUTOTUBE_ACCESS_PASSWORD</code> di Environment Render.</p>
+  </form>
+</div>
+
+
 <!-- Mobile Overlay -->
 <div id="overlay" onclick="toggleSidebar()" class="overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-40 opacity-0 pointer-events-none lg:hidden"></div>
 
@@ -92,7 +107,7 @@
       </button>
       <button onclick="showPage('queue')" class="nav-item w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-left" data-page="queue">
         <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-        <span class="text-sm sm:text-base flex-1 text-left">Antrian Upload</span>
+        <span class="text-sm sm:text-base flex-1 text-left">Draf Metadata</span>
         <span id="queueBadge" class="bg-red-500 text-xs px-2 py-0.5 rounded-full hidden">0</span>
       </button>
       <button onclick="showPage('history')" class="nav-item w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-left" data-page="history">
@@ -132,403 +147,120 @@
 
   <!-- Main Content -->
   <main class="main-content flex-1 lg:ml-64 min-w-0">
-    <!-- Top Bar -->
-    <header class="glass border-b border-white/10 px-4 sm:px-6 lg:px-8 py-3 sm:py-4 sticky top-0 z-30 flex items-center justify-between gap-3">
-      <div class="flex items-center gap-3 min-w-0 flex-1">
-        <button onclick="toggleSidebar()" class="lg:hidden p-2 hover:bg-white/10 rounded-lg touch-target flex-shrink-0">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-        </button>
-        <div class="min-w-0">
-          <h2 id="pageTitle" class="text-base sm:text-xl font-bold truncate">Dashboard</h2>
-          <p id="pageSubtitle" class="text-xs sm:text-sm text-gray-400 truncate">Ringkasan aktivitas sistem</p>
-        </div>
-      </div>
-      <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-        <div class="hidden md:flex items-center gap-2 glass px-3 py-2 rounded-full">
-          <span class="status-dot status-online"></span>
-          <span class="text-xs sm:text-sm">YouTube</span>
-        </div>
-        <div class="w-9 h-9 sm:w-10 sm:h-10 gradient-purple rounded-full flex items-center justify-center font-bold text-sm sm:text-base">A</div>
-      </div>
-    </header>
-
-    <div class="mx-4 sm:mx-6 lg:mx-8 mt-4 sm:mt-6 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-xs sm:text-sm text-amber-100" role="status">
-      <strong>Mode demo:</strong> fitur generator AI dan unggah pada AutoTube masih simulasi antarmuka, belum terhubung ke layanan AI atau YouTube. Halaman Unduh Video hanya menerima tautan file video langsung yang diizinkan.
+  <header class="glass border-b border-white/10 px-4 sm:px-6 lg:px-8 py-3 sm:py-4 sticky top-0 z-30 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0 flex-1">
+      <button onclick="toggleSidebar()" class="lg:hidden p-2 hover:bg-white/10 rounded-lg touch-target flex-shrink-0" aria-label="Buka menu">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="min-w-0"><h2 id="pageTitle" class="text-base sm:text-xl font-bold truncate">Dashboard</h2><p id="pageSubtitle" class="text-xs sm:text-sm text-gray-400 truncate">Ringkasan aktivitas nyata</p></div>
     </div>
-
-    <!-- Dashboard Page -->
-    <div id="page-dashboard" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 slide-in">
-      <!-- Stats Grid -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover">
-          <div class="flex items-center justify-between mb-3 sm:mb-4">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 gradient-red rounded-lg sm:rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            </div>
-            <span class="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded-full">+12%</span>
-          </div>
-          <p class="text-xl sm:text-2xl lg:text-3xl font-bold" id="statVideos">0</p>
-          <p class="text-xs sm:text-sm text-gray-400 mt-1">Total Video</p>
-        </div>
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover">
-          <div class="flex items-center justify-between mb-3 sm:mb-4">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 gradient-blue rounded-lg sm:rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            </div>
-            <span class="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded-full">+28%</span>
-          </div>
-          <p class="text-xl sm:text-2xl lg:text-3xl font-bold" id="statViews">0</p>
-          <p class="text-xs sm:text-sm text-gray-400 mt-1">Total Views</p>
-        </div>
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover">
-          <div class="flex items-center justify-between mb-3 sm:mb-4">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 gradient-green rounded-lg sm:rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            </div>
-            <span class="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded-full">+45%</span>
-          </div>
-          <p class="text-xl sm:text-2xl lg:text-3xl font-bold" id="statSubs">0</p>
-          <p class="text-xs sm:text-sm text-gray-400 mt-1">Subscribers</p>
-        </div>
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover col-span-2 sm:col-span-1">
-          <div class="flex items-center justify-between mb-3 sm:mb-4">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 gradient-orange rounded-lg sm:rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            </div>
-            <span class="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded-full">+8%</span>
-          </div>
-          <p class="text-xl sm:text-2xl lg:text-3xl font-bold">$<span id="statRevenue">0</span></p>
-          <p class="text-xs sm:text-sm text-gray-400 mt-1">Estimasi Revenue</p>
-        </div>
-      </div>
-
-      <!-- Quick Actions & Activity -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div class="lg:col-span-2 glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-          <div class="flex items-center justify-between mb-4 sm:mb-6">
-            <h3 class="font-bold text-base sm:text-lg">Aktivitas Terbaru</h3>
-            <button onclick="showPage('history')" class="text-xs sm:text-sm text-red-400 hover:text-red-300">Lihat Semua →</button>
-          </div>
-          <div id="recentActivity" class="space-y-2 sm:space-y-3">
-            <div class="text-center py-8 text-gray-500">
-              <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-              <p class="text-sm">Belum ada aktivitas</p>
-              <p class="text-xs mt-1">Mulai generate video pertama Anda</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-          <h3 class="font-bold text-base sm:text-lg mb-4">Aksi Cepat</h3>
-          <div class="space-y-2 sm:space-y-3">
-            <button onclick="showPage('generator')" class="w-full gradient-red rounded-xl p-3 sm:p-4 font-semibold hover:opacity-90 transition flex items-center gap-3 glow-red text-sm sm:text-base">
-              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              <span>Generate Video Baru</span>
-            </button>
-            <button onclick="processQueue()" class="w-full glass rounded-xl p-3 sm:p-4 font-semibold hover:bg-white/10 transition flex items-center gap-3 text-sm sm:text-base">
-              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-              <span>Proses Antrian</span>
-            </button>
-            <button onclick="showPage('templates')" class="w-full glass rounded-xl p-3 sm:p-4 font-semibold hover:bg-white/10 transition flex items-center gap-3 text-sm sm:text-base">
-              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"/></svg>
-              <span>Pilih Template</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- System Status -->
-      <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-        <h3 class="font-bold text-base sm:text-lg mb-4">Status Sistem</h3>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div class="flex items-center gap-2 sm:gap-3">
-            <span class="status-dot status-online flex-shrink-0"></span>
-            <div class="min-w-0">
-              <p class="text-xs sm:text-sm font-medium truncate">YouTube API</p>
-              <p class="text-xs text-gray-500">Terhubung</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 sm:gap-3">
-            <span class="status-dot status-online flex-shrink-0"></span>
-            <div class="min-w-0">
-              <p class="text-xs sm:text-sm font-medium truncate">AI Engine</p>
-              <p class="text-xs text-gray-500">Aktif</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 sm:gap-3">
-            <span class="status-dot status-online flex-shrink-0"></span>
-            <div class="min-w-0">
-              <p class="text-xs sm:text-sm font-medium truncate">Renderer</p>
-              <p class="text-xs text-gray-500">Standby</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 sm:gap-3">
-            <span class="status-dot status-online flex-shrink-0"></span>
-            <div class="min-w-0">
-              <p class="text-xs sm:text-sm font-medium truncate">Storage</p>
-              <p class="text-xs text-gray-500">45%</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+      <span id="youtubeHeaderStatus" class="hidden sm:inline-flex items-center gap-2 glass px-3 py-2 rounded-full text-xs">Memeriksa YouTube…</span>
+      <button onclick="logout()" class="glass rounded-lg px-3 py-2 text-xs hover:bg-white/10">Keluar</button>
     </div>
+  </header>
 
-    <!-- Generator Page -->
-    <div id="page-generator" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 hidden">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
-          <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-            <h3 class="font-bold text-base sm:text-lg mb-4">Informasi Video</h3>
-            <div class="space-y-4">
-              <div>
-                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Judul Video</label>
-                <input id="videoTitle" type="text" placeholder="Contoh: 10 Fakta Menarik..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none transition text-sm sm:text-base">
-                <button onclick="generateTitle()" class="mt-2 text-xs text-red-400 hover:text-red-300 flex items-center gap-1 py-2">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                  Generate dengan AI
-                </button>
-              </div>
-              <div>
-                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Deskripsi</label>
-                <textarea id="videoDesc" rows="4" placeholder="Deskripsi video..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none transition resize-none text-sm sm:text-base"></textarea>
-                <button onclick="generateDescription()" class="mt-2 text-xs text-red-400 hover:text-red-300 flex items-center gap-1 py-2">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                  Generate dengan AI
-                </button>
-              </div>
-              <div>
-                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Tags</label>
-                <input id="videoTags" type="text" placeholder="fakta, edukasi, sains" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none transition text-sm sm:text-base">
-              </div>
-            </div>
-          </div>
-
-          <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <h3 class="font-bold text-base sm:text-lg">Script Konten</h3>
-              <button onclick="generateScript()" class="gradient-red px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                Generate Script Otomatis
-              </button>
-            </div>
-            <textarea id="videoScript" rows="8" sm:rows="10" placeholder="Tulis script atau generate otomatis..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none transition resize-none font-mono text-xs sm:text-sm"></textarea>
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between mt-3 text-xs text-gray-400 gap-1">
-              <span id="scriptStats">0 karakter • 0 kata • ~0 menit durasi</span>
-              <span class="hidden sm:inline">Estimasi durasi dari kecepatan baca normal</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Settings Panel -->
-        <div class="space-y-4 sm:space-y-6">
-          <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-            <h3 class="font-bold text-base sm:text-lg mb-4">Pengaturan Video</h3>
-            <div class="space-y-3 sm:space-y-4">
-              <div>
-                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Template</label>
-                <select id="videoTemplate" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-                  <option value="facts">🎯 Fakta Menarik</option>
-                  <option value="top10">🏆 Top 10</option>
-                  <option value="story">📖 Cerita / Storytelling</option>
-                  <option value="tutorial">📚 Tutorial</option>
-                  <option value="news">📰 Berita</option>
-                  <option value="shorts">⚡ YouTube Shorts</option>
-                </select>
-              </div>
-              <div>
-                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Voice / Narator</label>
-                <select id="videoVoice" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-                  <option value="id-male-1">🎙️ Pria Indonesia (Andi)</option>
-                  <option value="id-female-1">🎙️ Wanita Indonesia (Sari)</option>
-                  <option value="en-male-1">🎙️ English Male (John)</option>
-                  <option value="en-female-1">🎙️ English Female (Emma)</option>
-                </select>
-              </div>
-              <div>
-                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Durasi Target</label>
-                <select id="videoDuration" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-                  <option value="60">⚡ 1 Menit (Shorts)</option>
-                  <option value="300" selected>📺 5 Menit</option>
-                  <option value="600">📺 10 Menit</option>
-                  <option value="900">📺 15 Menit</option>
-                </select>
-              </div>
-              <div>
-                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Kualitas</label>
-                <select id="videoQuality" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-                  <option value="720">720p HD</option>
-                  <option value="1080" selected>1080p Full HD</option>
-                  <option value="4k">4K Ultra HD</option>
-                </select>
-              </div>
-              <div>
-                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Musik Latar</label>
-                <select id="videoMusic" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-                  <option value="none">Tidak ada</option>
-                  <option value="cinematic" selected>🎵 Cinematic</option>
-                  <option value="upbeat">🎵 Upbeat</option>
-                  <option value="chill">🎵 Chill / Lo-fi</option>
-                  <option value="dramatic">🎵 Dramatic</option>
-                </select>
-              </div>
-              <div>
-                <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Visibilitas</label>
-                <select id="videoVisibility" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-                  <option value="public">🌍 Publik</option>
-                  <option value="unlisted">🔗 Tidak Publik</option>
-                  <option value="private">🔒 Privat</option>
-                  <option value="schedule">⏰ Terjadwal</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-            <h3 class="font-bold text-base sm:text-lg mb-4">Thumbnail</h3>
-            <div id="thumbnailPreview" class="aspect-video bg-gradient-to-br from-red-600 via-purple-600 to-blue-600 rounded-xl flex items-center justify-center mb-3">
-              <span class="text-white/50 text-xs sm:text-sm">Preview Thumbnail</span>
-            </div>
-            <button onclick="generateThumbnail()" class="w-full glass rounded-xl py-3 text-xs sm:text-sm hover:bg-white/10 transition">
-              🎨 Generate Thumbnail AI
-            </button>
-          </div>
-
-          <div class="space-y-2 sm:space-y-3">
-            <button onclick="addToQueue()" class="w-full gradient-red rounded-xl py-3 sm:py-4 font-bold hover:opacity-90 transition glow-red flex items-center justify-center gap-2 text-sm sm:text-base">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Tambahkan ke Antrian
-            </button>
-            <button onclick="generateAndUpload()" class="w-full gradient-purple rounded-xl py-3 sm:py-4 font-bold hover:opacity-90 transition flex items-center justify-center gap-2 text-sm sm:text-base">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              Generate & Upload Sekarang
-            </button>
-          </div>
-        </div>
-      </div>
+  <section id="page-dashboard" class="p-4 sm:p-6 lg:p-8 space-y-5">
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+      <article class="glass rounded-xl p-4"><p class="text-xs text-gray-400">Upload berhasil (peramban ini)</p><p id="statVideos" class="mt-2 text-2xl font-bold">0</p></article>
+      <article class="glass rounded-xl p-4"><p class="text-xs text-gray-400">Draf tersimpan</p><p id="statDrafts" class="mt-2 text-2xl font-bold">0</p></article>
+      <article class="glass rounded-xl p-4"><p class="text-xs text-gray-400">Gemini Omni</p><p id="statGemini" class="mt-2 text-sm font-semibold">Belum diperiksa</p></article>
+      <article class="glass rounded-xl p-4"><p class="text-xs text-gray-400">Akun YouTube</p><p id="statYoutube" class="mt-2 text-sm font-semibold">Belum terhubung</p></article>
     </div>
-
-    <!-- Queue Page -->
-    <div id="page-queue" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 hidden">
-      <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
-          <div>
-            <h3 class="font-bold text-base sm:text-lg">Antrian Upload</h3>
-            <p class="text-xs sm:text-sm text-gray-400">Video yang siap diproses</p>
-          </div>
-          <div class="flex gap-2">
-            <button onclick="processQueue()" class="gradient-red px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:opacity-90 transition flex items-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg>
-              <span class="hidden sm:inline">Proses Semua</span>
-              <span class="sm:hidden">Proses</span>
-            </button>
-            <button onclick="clearQueue()" class="glass px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm hover:bg-white/10 transition">
-              Kosongkan
-            </button>
-          </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      <section class="lg:col-span-2 glass rounded-2xl p-4 sm:p-6">
+        <div class="mb-4 flex items-center justify-between"><h3 class="font-bold text-lg">Riwayat upload nyata</h3><button onclick="showPage('history')" class="text-sm text-red-400">Lihat semua →</button></div>
+        <div id="recentActivity" class="space-y-3"></div>
+      </section>
+      <section class="glass rounded-2xl p-4 sm:p-6">
+        <h3 class="mb-4 font-bold text-lg">Aksi</h3>
+        <div class="space-y-3">
+          <button onclick="showPage('generator')" class="w-full gradient-red rounded-xl p-4 text-left font-semibold">Buat klip / upload video</button>
+          <button onclick="showPage('download')" class="w-full glass rounded-xl p-4 text-left font-semibold hover:bg-white/10">Unduh video dari tautan</button>
+          <button onclick="showPage('settings')" class="w-full glass rounded-xl p-4 text-left font-semibold hover:bg-white/10">Hubungkan YouTube</button>
         </div>
-        <div id="queueList" class="space-y-2 sm:space-y-3">
-          <div class="text-center py-12 text-gray-500">
-            <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-            <p class="text-sm">Antrian kosong</p>
-            <p class="text-xs mt-1">Tambahkan video dari halaman Generator</p>
-          </div>
-        </div>
-      </div>
+        <p class="mt-4 text-xs text-gray-500">Data statistik tayangan dan pendapatan belum diambil dari YouTube Analytics, jadi tidak ditampilkan sebagai angka contoh.</p>
+      </section>
     </div>
-
-    <!-- History Page -->
-    <div id="page-history" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 hidden">
-      <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
-          <div>
-            <h3 class="font-bold text-base sm:text-lg">Riwayat Upload</h3>
-            <p class="text-xs sm:text-sm text-gray-400">Semua video yang telah diupload</p>
-          </div>
-          <button onclick="clearHistory()" class="glass px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm hover:bg-white/10 transition self-start sm:self-auto">
-            Hapus Riwayat
-          </button>
-        </div>
-        <div id="historyList" class="space-y-2 sm:space-y-3">
-          <div class="text-center py-12 text-gray-500">
-            <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <p class="text-sm">Belum ada riwayat</p>
-            <p class="text-xs mt-1">Video yang berhasil diupload akan muncul di sini</p>
-          </div>
-        </div>
+    <section class="glass rounded-2xl p-4 sm:p-6">
+      <h3 class="mb-4 font-bold text-lg">Status integrasi</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="rounded-xl bg-black/20 p-4"><p class="text-sm font-semibold">Gemini Omni</p><p id="geminiStatusText" class="mt-1 text-xs text-gray-400">Memeriksa konfigurasi server…</p></div>
+        <div class="rounded-xl bg-black/20 p-4"><p class="text-sm font-semibold">YouTube OAuth</p><p id="youtubeStatusText" class="mt-1 text-xs text-gray-400">Memeriksa koneksi akun…</p></div>
       </div>
-    </div>
+    </section>
+  </section>
 
-    <!-- Templates Page -->
-    <div id="page-templates" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 hidden">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover cursor-pointer" onclick="useTemplate('facts')">
-          <div class="aspect-video gradient-red rounded-xl mb-3 sm:mb-4 flex items-center justify-center">
-            <span class="text-4xl sm:text-5xl">🎯</span>
-          </div>
-          <h4 class="font-bold mb-1 text-sm sm:text-base">Fakta Menarik</h4>
-          <p class="text-xs sm:text-sm text-gray-400 mb-3">Video fakta-fakta unik dengan visual menarik</p>
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-gray-500">5-10 menit</span>
-            <span class="text-green-400">Populer</span>
-          </div>
-        </div>
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover cursor-pointer" onclick="useTemplate('top10')">
-          <div class="aspect-video gradient-orange rounded-xl mb-3 sm:mb-4 flex items-center justify-center">
-            <span class="text-4xl sm:text-5xl">🏆</span>
-          </div>
-          <h4 class="font-bold mb-1 text-sm sm:text-base">Top 10</h4>
-          <p class="text-xs sm:text-sm text-gray-400 mb-3">Format listicle dengan countdown</p>
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-gray-500">8-15 menit</span>
-            <span class="text-green-400">Trending</span>
-          </div>
-        </div>
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover cursor-pointer" onclick="useTemplate('story')">
-          <div class="aspect-video gradient-purple rounded-xl mb-3 sm:mb-4 flex items-center justify-center">
-            <span class="text-4xl sm:text-5xl">📖</span>
-          </div>
-          <h4 class="font-bold mb-1 text-sm sm:text-base">Storytelling</h4>
-          <p class="text-xs sm:text-sm text-gray-400 mb-3">Cerita naratif dengan alur menarik</p>
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-gray-500">10-20 menit</span>
-            <span class="text-blue-400">Baru</span>
-          </div>
-        </div>
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover cursor-pointer" onclick="useTemplate('tutorial')">
-          <div class="aspect-video gradient-blue rounded-xl mb-3 sm:mb-4 flex items-center justify-center">
-            <span class="text-4xl sm:text-5xl">📚</span>
-          </div>
-          <h4 class="font-bold mb-1 text-sm sm:text-base">Tutorial</h4>
-          <p class="text-xs sm:text-sm text-gray-400 mb-3">Panduan langkah demi langkah</p>
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-gray-500">5-15 menit</span>
-            <span class="text-green-400">Populer</span>
-          </div>
-        </div>
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover cursor-pointer" onclick="useTemplate('news')">
-          <div class="aspect-video bg-gradient-to-br from-gray-700 to-gray-900 rounded-xl mb-3 sm:mb-4 flex items-center justify-center">
-            <span class="text-4xl sm:text-5xl">📰</span>
-          </div>
-          <h4 class="font-bold mb-1 text-sm sm:text-base">Berita</h4>
-          <p class="text-xs sm:text-sm text-gray-400 mb-3">Update berita terkini dengan narasi</p>
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-gray-500">3-8 menit</span>
-            <span class="text-yellow-400">Cepat</span>
-          </div>
-        </div>
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6 card-hover cursor-pointer" onclick="useTemplate('shorts')">
-          <div class="aspect-video bg-gradient-to-br from-pink-500 to-red-500 rounded-xl mb-3 sm:mb-4 flex items-center justify-center">
-            <span class="text-4xl sm:text-5xl">⚡</span>
-          </div>
-          <h4 class="font-bold mb-1 text-sm sm:text-base">YouTube Shorts</h4>
-          <p class="text-xs sm:text-sm text-gray-400 mb-3">Video vertikal pendek viral</p>
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-gray-500">15-60 detik</span>
-            <span class="text-red-400">Viral</span>
-          </div>
-        </div>
-      </div>
+  <section id="page-generator" class="hidden p-4 sm:p-6 lg:p-8 space-y-5">
+    <div class="rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+      Gemini Omni membuat klip pendek dengan target 4, 6, atau 8 detik, bukan video 1–15 menit. Pembuatan memakai kuota/biaya akun Google Anda. Untuk video lebih panjang, pilih file video yang sudah Anda miliki lalu unggah.
     </div>
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+      <div class="xl:col-span-2 space-y-4">
+        <section class="glass rounded-2xl p-4 sm:p-6 space-y-4">
+          <h3 class="font-bold text-lg">Konten dengan Gemini</h3>
+          <div><label for="videoTopic" class="mb-2 block text-sm text-gray-400">Topik</label><input id="videoTopic" type="text" class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-red-500 focus:outline-none" placeholder="Contoh: fakta menarik tentang laut dalam"></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label for="videoTemplate" class="mb-2 block text-sm text-gray-400">Gaya naskah</label><select id="videoTemplate" class="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm"><option value="fakta">Fakta menarik</option><option value="top10">Daftar Top 10</option><option value="story">Cerita / storytelling</option><option value="tutorial">Tutorial</option><option value="news">Berita (verifikasi fakta secara manual)</option><option value="shorts">Shorts</option></select></div>
+            <div><label for="scriptDuration" class="mb-2 block text-sm text-gray-400">Target panjang naskah</label><select id="scriptDuration" class="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm"><option value="1">1 menit</option><option value="5" selected>5 menit</option><option value="10">10 menit</option><option value="15">15 menit</option></select></div>
+          </div>
+          <div><label for="videoTitle" class="mb-2 block text-sm text-gray-400">Judul YouTube</label><div class="flex flex-col sm:flex-row gap-2"><input id="videoTitle" maxlength="100" class="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm" placeholder="Judul video"><button onclick="generateTitle()" class="glass rounded-xl px-4 py-3 text-sm hover:bg-white/10">Buat judul</button></div></div>
+          <div><label for="videoDesc" class="mb-2 block text-sm text-gray-400">Deskripsi</label><textarea id="videoDesc" rows="4" maxlength="5000" class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm" placeholder="Deskripsi untuk YouTube"></textarea><button onclick="generateDescription()" class="mt-2 text-sm text-red-300 hover:text-red-200">Buat deskripsi dengan Gemini</button></div>
+          <div><label for="videoTags" class="mb-2 block text-sm text-gray-400">Tag (pisahkan dengan koma)</label><input id="videoTags" class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm" placeholder="edukasi, sains, fakta"></div>
+        </section>
+        <section class="glass rounded-2xl p-4 sm:p-6">
+          <div class="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"><h3 class="font-bold text-lg">Naskah</h3><button onclick="generateScript()" class="gradient-red rounded-lg px-4 py-2 text-sm font-semibold">Buat naskah dengan Gemini</button></div>
+          <textarea id="videoScript" rows="12" class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 font-mono text-sm" placeholder="Tulis naskah atau hasilkan dengan Gemini"></textarea>
+          <p id="scriptStats" class="mt-2 text-xs text-gray-400">0 karakter • 0 kata</p>
+        </section>
+      </div>
+      <aside class="space-y-4">
+        <section class="glass rounded-2xl p-4 sm:p-6 space-y-4">
+          <h3 class="font-bold text-lg">Klip Gemini Omni</h3>
+          <div><label for="videoPrompt" class="mb-2 block text-sm text-gray-400">Deskripsi adegan</label><textarea id="videoPrompt" rows="5" class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm" placeholder="Contoh: cinematic underwater scene, sunlight through blue water, schools of tropical fish, natural movement, no text"></textarea><p class="mt-1 text-xs text-gray-500">Gunakan prompt visual yang ringkas. Naskah panjang tidak otomatis menjadi video panjang.</p></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label for="videoDuration" class="mb-2 block text-xs text-gray-400">Target durasi</label><select id="videoDuration" class="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-3 text-sm"><option value="4">4 detik</option><option value="6">6 detik</option><option value="8" selected>8 detik</option></select></div>
+            <div><label for="videoQuality" class="mb-2 block text-xs text-gray-400">Resolusi</label><select id="videoQuality" class="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-3 text-sm"><option value="720p" selected>720p</option><option value="1080p">1080p (upscaled)</option></select></div>
+            <div class="col-span-2"><label for="aspectRatio" class="mb-2 block text-xs text-gray-400">Orientasi</label><select id="aspectRatio" class="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-3 text-sm"><option value="16:9">Landscape 16:9</option><option value="9:16">Vertikal 9:16</option></select></div>
+          </div>
+          <button id="generateVideoButton" onclick="generateVideoWithGemini()" class="w-full gradient-purple rounded-xl py-3 font-semibold">Buat klip dengan Gemini Omni</button>
+          <p id="videoJobStatus" class="text-xs text-gray-400" role="status" aria-live="polite">Belum ada proses video.</p>
+          <div id="generatedVideoWrap" class="hidden space-y-2"><video id="generatedVideoPreview" controls playsinline class="w-full rounded-xl bg-black"></video><a id="generatedVideoDownload" class="text-sm text-red-300 underline" href="#" download>Unduh klip hasil Gemini Omni</a></div>
+        </section>
+        <section class="glass rounded-2xl p-4 sm:p-6 space-y-4">
+          <h3 class="font-bold text-lg">Sumber video untuk upload</h3>
+          <div><label for="videoFile" class="mb-2 block text-sm text-gray-400">Pilih video lokal (maks. 100 MB)</label><input id="videoFile" type="file" accept="video/mp4,video/quicktime,video/webm,video/x-m4v" class="block w-full text-xs text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-red-600 file:px-3 file:py-2 file:text-white"><p id="videoFileName" class="mt-2 text-xs text-gray-500">Atau gunakan klip Gemini Omni yang selesai dibuat.</p></div>
+          <div><label for="videoVisibility" class="mb-2 block text-sm text-gray-400">Visibilitas YouTube</label><select id="videoVisibility" class="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm"><option value="private" selected>Privat (disarankan)</option><option value="unlisted">Tidak publik</option><option value="public">Publik</option></select></div>
+          <button id="uploadVideoButton" onclick="uploadToYoutube()" class="w-full gradient-red rounded-xl py-3 font-semibold">Upload ke YouTube</button>
+          <p id="uploadStatus" class="text-xs text-gray-400" role="status" aria-live="polite">Upload memerlukan koneksi akun YouTube.</p>
+          <button onclick="addToQueue()" class="w-full glass rounded-xl py-3 text-sm hover:bg-white/10">Simpan metadata sebagai draf</button>
+        </section>
+      </aside>
+    </div>
+  </section>
+
+  <section id="page-queue" class="hidden p-4 sm:p-6 lg:p-8 space-y-4">
+    <div class="glass rounded-2xl p-4 sm:p-6">
+      <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"><div><h3 class="font-bold text-lg">Draf metadata</h3><p class="text-xs text-gray-400">Draf disimpan di browser ini. File video tidak disimpan di dalam draf dan tombol ini tidak mengunggah otomatis.</p></div><button onclick="clearQueue()" class="glass rounded-lg px-3 py-2 text-sm">Hapus semua draf</button></div>
+      <div id="queueList" class="space-y-3"></div>
+      <button onclick="showPage('generator')" class="mt-5 gradient-red rounded-xl px-4 py-3 text-sm font-semibold">Buka generator / upload</button>
+    </div>
+  </section>
+
+  <section id="page-history" class="hidden p-4 sm:p-6 lg:p-8">
+    <div class="glass rounded-2xl p-4 sm:p-6"><div class="mb-4 flex items-center justify-between gap-3"><div><h3 class="font-bold text-lg">Riwayat upload</h3><p class="text-xs text-gray-400">Riwayat lokal browser ini; hanya bertambah setelah YouTube mengonfirmasi upload.</p></div><button onclick="clearHistory()" class="glass rounded-lg px-3 py-2 text-sm">Hapus riwayat lokal</button></div><div id="historyList" class="space-y-3"></div></div>
+  </section>
+
+  <section id="page-templates" class="hidden p-4 sm:p-6 lg:p-8">
+    <div class="glass rounded-2xl p-4 sm:p-6"><h3 class="mb-4 font-bold text-lg">Gaya naskah</h3><p class="mb-5 text-sm text-gray-400">Memilih gaya hanya mengatur instruksi untuk Gemini; tidak mengisi konten contoh.</p><div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      <button onclick="useTemplate('fakta')" class="glass rounded-xl p-4 text-left hover:bg-white/10"><b>Fakta menarik</b><p class="mt-2 text-xs text-gray-400">Informasi dan penjelasan ringkas.</p></button>
+      <button onclick="useTemplate('top10')" class="glass rounded-xl p-4 text-left hover:bg-white/10"><b>Daftar Top 10</b><p class="mt-2 text-xs text-gray-400">Daftar bertahap; verifikasi faktanya sebelum publikasi.</p></button>
+      <button onclick="useTemplate('story')" class="glass rounded-xl p-4 text-left hover:bg-white/10"><b>Storytelling</b><p class="mt-2 text-xs text-gray-400">Alur cerita dengan pembuka, isi, dan penutup.</p></button>
+      <button onclick="useTemplate('tutorial')" class="glass rounded-xl p-4 text-left hover:bg-white/10"><b>Tutorial</b><p class="mt-2 text-xs text-gray-400">Langkah-langkah yang jelas dan berurutan.</p></button>
+      <button onclick="useTemplate('news')" class="glass rounded-xl p-4 text-left hover:bg-white/10"><b>Berita</b><p class="mt-2 text-xs text-gray-400">Draft berita, wajib cek sumber dan tanggal.</p></button>
+      <button onclick="useTemplate('shorts')" class="glass rounded-xl p-4 text-left hover:bg-white/10"><b>Shorts</b><p class="mt-2 text-xs text-gray-400">Hook cepat dan naskah pendek.</p></button>
+    </div></div>
+  </section>
 
     <!-- Download Video Page -->
     <div id="page-download" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 hidden">
@@ -574,130 +306,14 @@
       </section>
     </div>
 
-    <!-- Settings Page -->
-    <div id="page-settings" class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 hidden">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-          <h3 class="font-bold text-base sm:text-lg mb-4">🔑 YouTube API</h3>
-          <div class="space-y-3 sm:space-y-4">
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">API Key</label>
-              <input id="apiKey" type="password" placeholder="AIza..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-            </div>
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Client ID</label>
-              <input id="clientId" type="text" placeholder="xxxx.apps.googleusercontent.com" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-            </div>
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Client Secret</label>
-              <input id="clientSecret" type="password" placeholder="••••••••" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-            </div>
-            <button onclick="connectYouTube()" class="w-full gradient-red rounded-xl py-3 font-semibold hover:opacity-90 transition text-sm sm:text-base">
-              Hubungkan Akun YouTube
-            </button>
-          </div>
-        </div>
 
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-          <h3 class="font-bold text-base sm:text-lg mb-4">🤖 AI Engine</h3>
-          <div class="space-y-3 sm:space-y-4">
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Provider AI</label>
-              <select class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-                <option>OpenAI GPT-4</option>
-                <option>Anthropic Claude</option>
-                <option>Google Gemini</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">API Key AI</label>
-              <input type="password" placeholder="sk-..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-            </div>
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Text-to-Speech</label>
-              <select class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-                <option>ElevenLabs</option>
-                <option>Google TTS</option>
-                <option>Azure Speech</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Image Generation</label>
-              <select class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-                <option>DALL-E 3</option>
-                <option>Midjourney</option>
-                <option>Stable Diffusion</option>
-              </select>
-            </div>
-          </div>
-        </div>
 
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-          <h3 class="font-bold text-base sm:text-lg mb-4">⏰ Jadwal Otomatis</h3>
-          <div class="space-y-3 sm:space-y-4">
-            <div class="flex items-center justify-between py-2">
-              <span class="text-xs sm:text-sm">Aktifkan Auto-Upload</span>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="autoUpload" class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
-              </label>
-            </div>
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Frekuensi Upload</label>
-              <select class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-                <option>Setiap hari</option>
-                <option>2x sehari</option>
-                <option>3x sehari</option>
-                <option>Setiap minggu</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Waktu Upload (WIB)</label>
-              <input type="time" value="19:00" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-            </div>
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Niche / Topik</label>
-              <input type="text" placeholder="fakta unik, sains, teknologi" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-            </div>
-          </div>
-        </div>
-
-        <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-          <h3 class="font-bold text-base sm:text-lg mb-4">🎨 Branding</h3>
-          <div class="space-y-3 sm:space-y-4">
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Nama Channel</label>
-              <input type="text" placeholder="Channel Saya" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-            </div>
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Watermark</label>
-              <input type="text" placeholder="@channel" class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-            </div>
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Intro Text</label>
-              <input type="text" placeholder="Halo semuanya..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-            </div>
-            <div>
-              <label class="text-xs sm:text-sm text-gray-400 mb-2 block">Outro Text</label>
-              <input type="text" placeholder="Jangan lupa subscribe..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:border-red-500 focus:outline-none text-sm sm:text-base">
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="glass rounded-xl sm:rounded-2xl p-4 sm:p-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 class="font-bold text-base sm:text-lg">💾 Simpan Pengaturan</h3>
-            <p class="text-xs sm:text-sm text-gray-400">Pastikan semua konfigurasi tersimpan</p>
-          </div>
-          <button onclick="saveSettings()" class="gradient-red px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition text-sm sm:text-base">
-            Simpan Pengaturan
-          </button>
-        </div>
-      </div>
-    </div>
-  </main>
+  <section id="page-settings" class="hidden p-4 sm:p-6 lg:p-8 space-y-4">
+    <section class="glass rounded-2xl p-4 sm:p-6"><h3 class="font-bold text-lg">Koneksi YouTube</h3><p id="settingsYoutubeStatus" class="mt-2 text-sm text-gray-400">Memeriksa konfigurasi OAuth…</p><div class="mt-4 flex flex-col sm:flex-row gap-3"><button onclick="connectYouTube()" class="gradient-red rounded-xl px-5 py-3 font-semibold">Hubungkan akun Google / YouTube</button><button onclick="disconnectYouTube()" class="glass rounded-xl px-5 py-3 text-sm">Putuskan koneksi</button></div><p class="mt-3 text-xs text-gray-500">AutoTube meminta izin YouTube upload. Token disimpan terenkripsi sebagai cookie HttpOnly pada browser ini; rahasia OAuth tetap di server.</p></section>
+    <section class="glass rounded-2xl p-4 sm:p-6"><h3 class="font-bold text-lg">Konfigurasi server</h3><p id="settingsGeminiStatus" class="mt-2 text-sm text-gray-400">Memeriksa Gemini…</p><div class="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 text-xs text-gray-400"><p>Variabel Render yang diperlukan:</p><ul class="mt-2 list-disc space-y-1 pl-5"><li><code>AUTOTUBE_ACCESS_PASSWORD</code> (minimal 12 karakter; melindungi fitur berbiaya)</li><li><code>GEMINI_API_KEY</code></li><li><code>YOUTUBE_CLIENT_ID</code></li><li><code>YOUTUBE_CLIENT_SECRET</code></li><li><code>YOUTUBE_TOKEN_ENCRYPTION_KEY</code> (acak, minimal 24 karakter)</li></ul><p class="mt-3">Redirect URI OAuth: <code>https://video-downloader-soj1.onrender.com/api/youtube/callback</code></p></div></section>
+    <section class="glass rounded-2xl p-4 sm:p-6"><h3 class="font-bold text-lg">Keluar</h3><p class="mt-2 text-sm text-gray-400">Keluar menghapus sesi AutoTube dari browser ini.</p><button onclick="logout()" class="mt-4 glass rounded-xl px-5 py-3 text-sm">Keluar dari AutoTube</button></section>
+  </section>
+</main>
 </div>
 
 <!-- Bottom Navigation (Mobile Only) -->
@@ -716,7 +332,7 @@
   </button>
   <button onclick="showPage('queue')" class="flex flex-col items-center gap-1 p-2 rounded-lg text-gray-400 flex-1 relative" data-bottom="queue">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-    <span class="text-[10px]">Antrian</span>
+    <span class="text-[10px]">Draf</span>
     <span id="queueBadgeBottom" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full hidden">0</span>
   </button>
   <button onclick="showPage('history')" class="flex flex-col items-center gap-1 p-2 rounded-lg text-gray-400 flex-1" data-bottom="history">
@@ -741,31 +357,213 @@
 </div>
 
 <script>
-  // State
-  let queue = JSON.parse(localStorage.getItem('autotube_queue') || '[]');
-  let history = JSON.parse(localStorage.getItem('autotube_history') || '[]');
-  let stats = JSON.parse(localStorage.getItem('autotube_stats') || '{"videos":0,"views":12450,"subs":342,"revenue":45}');
+  let queue = safeRead('autotube_drafts_v2', []);
+  let history = safeRead('autotube_upload_history_v2', []);
+  let appStatus = null;
+  let generatedJobId = '';
+  let selectedDownload = null;
 
-  const sampleTitles = {
-    facts: ["10 Fakta Mengejutkan Tentang Otak Manusia", "7 Fenomena Alam Paling Misterius", "Fakta Gila Tentang Hiu", "12 Rahasia Laut Dalam"],
-    top10: ["TOP 10 Penemuan Teknologi Terbesar", "TOP 10 Tempat Misterius di Bumi", "TOP 10 Hewan Paling Berbahaya", "TOP 10 Kota Termahal 2026"],
-    story: ["Kisah Nyata: Petualangan Menyelamatkan Hewan", "Cerita Inspiratif: Dari Nol Hingga Sukses", "Misteri Peradaban Kuno"],
-    tutorial: ["Cara Membuat Website dalam 10 Menit", "Tutorial Belajar Coding dari Nol", "Panduan Fotografi Pemula"],
-    news: ["Update Terkini: Penemuan Baru Dunia", "Berita Sains: Terobosan Terbaru"],
-    shorts: ["Fakta 30 Detik yang Bikin Kaget! 🤯", "Life Hack Mengubah Hidupmu ⚡", "Tahukah Kamu? Fakta Gila 60 Detik"]
-  };
+  function safeRead(key, fallback) {
+    try { const value = JSON.parse(localStorage.getItem(key) || 'null'); return Array.isArray(value) ? value : fallback; }
+    catch (_) { return fallback; }
+  }
+  function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+  function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+  function saveQueue() { localStorage.setItem('autotube_drafts_v2', JSON.stringify(queue)); }
+  function saveHistory() { localStorage.setItem('autotube_upload_history_v2', JSON.stringify(history)); }
 
-  const sampleDescriptions = [
-    "Di video kali ini, kita akan membahas fakta-fakta menarik yang jarang diketahui.\n\n🔔 Aktifkan lonceng notifikasi\n👍 Like jika bermanfaat\n💬 Tulis komentar\n\n#fakta #edukasi #sains",
-    "Selamat datang! Video ini akan memberikan wawasan baru.\n\n📌 Timestamp:\n00:00 Intro\n00:30 Pembahasan\n08:00 Kesimpulan\n\n#viral #trending",
-    "Hai semuanya! Kita akan mengupas tuntas topik menarik.\n\n🎯 Support channel:\n• Subscribe\n• Share\n• Komen\n\n#youtube #indonesia"
-  ];
+  async function apiJSON(url, options = {}) {
+    const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store', ...options });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401 && url !== '/api/autotube/login') showLogin('Sesi habis. Masuk kembali.');
+    if (!response.ok) throw new Error(data.error || `Permintaan gagal (HTTP ${response.status}).`);
+    return data;
+  }
 
-  const sampleScripts = [
-    "[INTRO - 0:00]\nHalo semuanya! Hari ini kita akan membahas sesuatu yang sangat menarik.\n\n[PEMBAHASAN 1 - 0:30]\nFakta pertama... Hal ini sangat mengejutkan karena banyak orang tidak menyadarinya.\n\n[PEMBAHASAN 2 - 2:00]\nMasih berkaitan dengan topik kita, ada fakta lain yang tidak kalah menarik.\n\n[KESIMPULAN - 7:00]\nItulah fakta menarik hari ini. Mana yang paling mengejutkan?\n\n[OUTRO - 8:00]\nJangan lupa like, subscribe, dan aktifkan lonceng!"
-  ];
+  function showLogin(message = '') {
+    const overlay = document.getElementById('loginOverlay');
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+    const el = document.getElementById('loginMessage');
+    if (message) { el.textContent = message; el.classList.remove('hidden'); }
+  }
+  function hideLogin() {
+    const overlay = document.getElementById('loginOverlay');
+    overlay.classList.add('hidden'); overlay.classList.remove('flex');
+  }
+  async function submitLogin(event) {
+    event.preventDefault();
+    const button = document.getElementById('loginButton');
+    const message = document.getElementById('loginMessage');
+    button.disabled = true; button.textContent = 'Memeriksa…';
+    try {
+      await apiJSON('/api/autotube/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({password: document.getElementById('loginPassword').value}) });
+      document.getElementById('loginPassword').value = '';
+      message.classList.add('hidden'); hideLogin(); await initializeApp();
+    } catch (error) { message.textContent = error.message; message.classList.remove('hidden'); }
+    finally { button.disabled = false; button.textContent = 'Masuk'; }
+  }
+  async function logout() {
+    try { await apiJSON('/api/autotube/logout', {method:'POST'}); } catch (_) {}
+    showLogin('Anda telah keluar. Masukkan kata sandi untuk masuk kembali.');
+  }
+  async function checkAuth() {
+    try {
+      appStatus = await apiJSON('/api/autotube/status');
+      if (!appStatus.accessPasswordConfigured) { showLogin('AutoTube dikunci sampai AUTOTUBE_ACCESS_PASSWORD (minimal 12 karakter) ditambahkan di Render.'); return false; }
+      if (!appStatus.authenticated) { showLogin(); return false; }
+      hideLogin(); return true;
+    } catch (error) { showLogin(error.message); return false; }
+  }
+  async function initializeApp() {
+    try { appStatus = await apiJSON('/api/autotube/status'); } catch (error) { showLogin(error.message); return; }
+    updateIntegrationStatus(); renderQueue(); renderHistory(); renderRecentActivity(); updateStats();
+    const params = new URLSearchParams(location.search);
+    if (params.get('youtube') === 'connected') showToast('YouTube terhubung', 'Izin upload sudah diberikan.');
+    if (params.get('youtube') === 'denied') showToast('Koneksi dibatalkan', 'Anda tidak memberi izin YouTube.', 'error');
+    if (params.get('youtube') === 'error') showToast('OAuth gagal', 'Periksa konfigurasi OAuth di Render dan Google Cloud.', 'error');
+    if (params.has('youtube')) window.history.replaceState({}, '', location.pathname);
+  }
 
-  function checkDownloadUrl() {
+  function updateIntegrationStatus() {
+    if (!appStatus) return;
+    const geminiReady = Boolean(appStatus.geminiConfigured);
+    const ytReady = Boolean(appStatus.youtubeConnected);
+    const gText = geminiReady ? `API key terpasang • model teks ${escapeHTML('Gemini')}, video ${escapeHTML(appStatus.videoModel || 'Gemini Omni')}` : 'GEMINI_API_KEY belum ditambahkan di Render.';
+    const yText = ytReady ? 'Akun sudah memberi izin upload.' : (appStatus.youtubeConfigured ? 'Belum dihubungkan; hubungkan akun di Pengaturan.' : 'Kredensial OAuth YouTube belum lengkap di Render.');
+    setText('geminiStatusText', gText); setText('youtubeStatusText', yText);
+    setText('settingsGeminiStatus', geminiReady ? 'Gemini/Gemini Omni API key terpasang di server.' : 'Gemini belum dikonfigurasi. Fitur terkait tidak dapat digunakan sebelum GEMINI_API_KEY ditambahkan.');
+    setText('settingsYoutubeStatus', ytReady ? 'Akun YouTube terhubung.' : (appStatus.youtubeConfigured ? 'OAuth siap. Tekan Hubungkan akun untuk memberi izin.' : 'Tambahkan YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, dan YOUTUBE_TOKEN_ENCRYPTION_KEY di Render.'));
+    setText('statGemini', geminiReady ? 'Siap' : 'Belum diatur'); setText('statYoutube', ytReady ? 'Terhubung' : 'Belum terhubung');
+    const header = document.getElementById('youtubeHeaderStatus');
+    header.textContent = ytReady ? '● YouTube terhubung' : '○ YouTube belum terhubung';
+    header.className = `hidden sm:inline-flex items-center gap-2 glass px-3 py-2 rounded-full text-xs ${ytReady ? 'text-green-300' : 'text-gray-400'}`;
+    updateStats();
+  }
+  function setText(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
+  function updateStats() {
+    setText('statVideos', String(history.length));
+    setText('statDrafts', String(queue.length));
+    const badge = document.getElementById('queueBadge');
+    const badgeBottom = document.getElementById('queueBadgeBottom');
+    [badge, badgeBottom].forEach(el => {
+      if (!el) return;
+      if (queue.length) { el.textContent = String(queue.length); el.classList.remove('hidden'); }
+      else el.classList.add('hidden');
+    });
+  }
+
+  function showPage(page) {
+    document.querySelectorAll('[id^="page-"]').forEach(el => el.classList.add('hidden'));
+    const panel = document.getElementById('page-' + page); if (!panel) return;
+    panel.classList.remove('hidden'); panel.classList.add('slide-in');
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    const nav = document.querySelector(`[data-page="${page}"]`); if (nav) nav.classList.add('active');
+    document.querySelectorAll('[data-bottom]').forEach(el => {el.classList.remove('text-red-400');el.classList.add('text-gray-400');});
+    const bottom = document.querySelector(`[data-bottom="${page}"]`); if (bottom) {bottom.classList.remove('text-gray-400');bottom.classList.add('text-red-400');}
+    const titles = {dashboard:['Dashboard','Ringkasan aktivitas nyata'],generator:['Generator','Gemini, Gemini Omni, dan upload YouTube'],queue:['Draf metadata','Simpanan lokal, bukan proses upload'],history:['Riwayat','Upload yang dikonfirmasi YouTube'],templates:['Gaya naskah','Instruksi untuk Gemini'],settings:['Pengaturan','Status integrasi dan OAuth'],download:['Unduh Video','Unduh file video langsung yang Anda miliki izinnya']};
+    setText('pageTitle', titles[page]?.[0] || page); setText('pageSubtitle', titles[page]?.[1] || '');
+    if (window.innerWidth < 1024) closeSidebar(); window.scrollTo(0, 0);
+  }
+  function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); }
+  function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
+  function showToast(title, message, type='success') {
+    const toast=document.getElementById('toast'), icon=document.getElementById('toastIcon');
+    setText('toastTitle',title); setText('toastMessage',message);
+    icon.className='w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0';
+    icon.classList.add(type==='error'?'gradient-red':type==='info'?'gradient-blue':'gradient-green');
+    toast.classList.remove('hidden'); clearTimeout(window.toastTimeout); window.toastTimeout=setTimeout(()=>toast.classList.add('hidden'),4500);
+  }
+
+  async function generateContent(type) {
+    const topic=document.getElementById('videoTopic').value.trim();
+    const title=document.getElementById('videoTitle').value.trim();
+    const script=document.getElementById('videoScript').value.trim();
+    if (!topic && !title && !script) { showToast('Topik diperlukan','Isi topik atau judul terlebih dahulu.','error'); return; }
+    const btns={title:'Buat judul',description:'Buat deskripsi dengan Gemini',script:'Buat naskah dengan Gemini'};
+    const button=[...document.querySelectorAll('button')].find(el=>el.textContent.trim()===btns[type]);
+    const old=button?.textContent; if(button){button.disabled=true;button.textContent='Gemini sedang bekerja…';}
+    try {
+      const data=await apiJSON('/api/autotube/generate-text',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,topic,title,script,template:document.getElementById('videoTemplate').value,targetMinutes:document.getElementById('scriptDuration').value})});
+      if(type==='title') document.getElementById('videoTitle').value=data.text;
+      if(type==='description') document.getElementById('videoDesc').value=data.text;
+      if(type==='script'){document.getElementById('videoScript').value=data.text;updateScriptStats();}
+      showToast('Gemini selesai','Konten dibuat dari respons API.');
+    } catch(error){showToast('Gemini gagal',error.message,'error');}
+    finally{if(button){button.disabled=false;button.textContent=old;}}
+  }
+  function generateTitle(){return generateContent('title');}
+  function generateDescription(){return generateContent('description');}
+  function generateScript(){return generateContent('script');}
+  function updateScriptStats(){const text=document.getElementById('videoScript').value;const words=text.trim()?text.trim().split(/\s+/).length:0;setText('scriptStats',`${text.length} karakter • ${words} kata`);}
+
+  async function generateVideoWithGemini() {
+    const prompt=document.getElementById('videoPrompt').value.trim() || document.getElementById('videoTopic').value.trim();
+    if(!prompt){showToast('Prompt diperlukan','Isi deskripsi adegan video terlebih dahulu.','error');return;}
+    const duration=document.getElementById('videoDuration').value;
+    const resolution=document.getElementById('videoQuality').value;
+    if(!confirm(`Buat satu klip Gemini Omni dengan target ${duration} detik? Permintaan memakai kuota/biaya pada akun Google yang memiliki GEMINI_API_KEY.`))return;
+    const button=document.getElementById('generateVideoButton');button.disabled=true;button.textContent='Memulai Gemini Omni…';
+    setText('videoJobStatus','Meminta proses pembuatan video ke Gemini Omni…');
+    document.getElementById('generatedVideoWrap').classList.add('hidden');generatedJobId='';
+    try{
+      const started=await apiJSON('/api/autotube/generate-video',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,durationSeconds:Number(duration),resolution,aspectRatio:document.getElementById('aspectRatio').value})});
+      generatedJobId=started.jobId;button.textContent='Gemini Omni sedang membuat klip…';
+      for(let i=0;i<160;i++){
+        await wait(5000);
+        const job=await apiJSON(`/api/autotube/video-jobs/${encodeURIComponent(generatedJobId)}`);
+        setText('videoJobStatus',job.status==='ready'?'Klip selesai dan siap di-preview atau diupload.':job.status==='failed'?`Gagal: ${job.error}`:`Gemini Omni sedang memproses… ${job.progress||0}%`);
+        if(job.status==='failed')throw new Error(job.error||'Gemini Omni gagal.');
+        if(job.status==='ready'){
+          const src=`${job.fileUrl}?t=${Date.now()}`;const player=document.getElementById('generatedVideoPreview');player.src=src;player.load();
+          const link=document.getElementById('generatedVideoDownload');link.href=job.fileUrl;document.getElementById('generatedVideoWrap').classList.remove('hidden');
+          showToast('Klip siap','Video nyata dari Gemini Omni sudah tersedia.');return;
+        }
+      }
+      throw new Error('Pemeriksaan proses mencapai batas waktu. Silakan coba lagi.');
+    }catch(error){setText('videoJobStatus',`Gagal: ${error.message}`);showToast('Pembuatan video gagal',error.message,'error');}
+    finally{button.disabled=false;button.textContent='Buat klip dengan Gemini Omni';}
+  }
+
+  async function uploadToYoutube(){
+    if(!appStatus?.youtubeConnected){showToast('Hubungkan YouTube','Buka Pengaturan dan hubungkan akun terlebih dahulu.','error');showPage('settings');return;}
+    const input=document.getElementById('videoFile');const file=input.files?.[0];
+    if(!file&&!generatedJobId){showToast('Video diperlukan','Pilih file video atau buat klip Gemini Omni terlebih dahulu.','error');return;}
+    const title=document.getElementById('videoTitle').value.trim();if(!title){showToast('Judul diperlukan','Isi judul YouTube terlebih dahulu.','error');return;}
+    const form=new FormData();if(file)form.append('video',file);else form.append('jobId',generatedJobId);
+    form.append('title',title);form.append('description',document.getElementById('videoDesc').value);form.append('tags',document.getElementById('videoTags').value);form.append('privacyStatus',document.getElementById('videoVisibility').value);
+    const button=document.getElementById('uploadVideoButton');button.disabled=true;button.textContent='Mengunggah ke YouTube…';setText('uploadStatus','Upload berjalan; jangan tutup halaman sampai selesai.');
+    try{
+      const response=await fetch('/api/youtube/upload',{method:'POST',body:form,credentials:'same-origin'});const data=await response.json().catch(()=>({}));
+      if(response.status===401){showLogin('Sesi habis. Masuk kembali.');throw new Error(data.error||'Sesi berakhir.');}
+      if(!response.ok)throw new Error(data.error||`Upload gagal (HTTP ${response.status}).`);
+      history.unshift({id:data.videoId,title:data.title,url:data.url,privacyStatus:data.privacyStatus,uploadedAt:data.uploadedAt});history=history.slice(0,100);saveHistory();renderHistory();renderRecentActivity();updateStats();
+      setText('uploadStatus',`Upload dikonfirmasi YouTube: ${data.url}`);showToast('Upload berhasil',`Video ${data.videoId} sudah dikirim ke YouTube.`);
+      if(file)input.value='';setText('videoFileName','Atau gunakan klip Gemini Omni yang selesai dibuat.');
+    }catch(error){setText('uploadStatus',`Upload gagal: ${error.message}`);showToast('Upload gagal',error.message,'error');}
+    finally{button.disabled=false;button.textContent='Upload ke YouTube';}
+  }
+  function connectYouTube(){if(!appStatus?.youtubeConfigured){showToast('OAuth belum siap','Tambahkan ID, secret, dan kunci enkripsi di Environment Render.','error');return;}window.location.href='/api/youtube/connect';}
+  async function disconnectYouTube(){try{await apiJSON('/api/youtube/disconnect',{method:'POST'});appStatus.youtubeConnected=false;updateIntegrationStatus();showToast('Koneksi diputus','Token YouTube dihapus dari browser ini.');}catch(error){showToast('Gagal',error.message,'error');}}
+
+  function addToQueue(){
+    const title=document.getElementById('videoTitle').value.trim();if(!title){showToast('Judul diperlukan','Isi judul sebelum menyimpan draf.','error');return;}
+    queue.unshift({id:Date.now(),title,topic:document.getElementById('videoTopic').value.trim(),description:document.getElementById('videoDesc').value.trim(),tags:document.getElementById('videoTags').value.trim(),createdAt:new Date().toISOString()});
+    queue=queue.slice(0,100);saveQueue();renderQueue();updateStats();showToast('Draf tersimpan','Metadata disimpan lokal. File video belum diupload.');
+  }
+  function removeFromQueue(id){queue=queue.filter(item=>String(item.id)!==String(id));saveQueue();renderQueue();updateStats();}
+  function clearQueue(){if(!queue.length)return;if(confirm('Hapus semua draf lokal?')){queue=[];saveQueue();renderQueue();updateStats();}}
+  function clearHistory(){if(!history.length)return;if(confirm('Hapus riwayat lokal browser ini? Ini tidak menghapus video dari YouTube.')){history=[];saveHistory();renderHistory();renderRecentActivity();updateStats();}}
+  function renderQueue(){const target=document.getElementById('queueList');if(!target)return;if(!queue.length){target.innerHTML='<div class="py-10 text-center text-sm text-gray-500">Belum ada draf.</div>';return;}target.innerHTML=queue.map(item=>`<article class="rounded-xl border border-white/10 bg-black/20 p-4"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><h4 class="font-semibold">${escapeHTML(item.title)}</h4><p class="mt-1 text-xs text-gray-400">${escapeHTML(item.topic||'Tanpa topik')} • ${new Date(item.createdAt).toLocaleString('id-ID')}</p></div><button onclick="removeFromQueue('${escapeHTML(item.id)}')" class="text-xs text-red-300">Hapus</button></div><p class="mt-3 text-xs text-gray-500">Draf metadata saja — tidak menyimpan file atau mengunggah otomatis.</p></article>`).join('');}
+  function renderHistory(){const target=document.getElementById('historyList');if(!target)return;if(!history.length){target.innerHTML='<div class="py-10 text-center text-sm text-gray-500">Belum ada upload yang dikonfirmasi YouTube.</div>';return;}target.innerHTML=history.map(item=>`<article class="rounded-xl border border-white/10 bg-black/20 p-4"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div class="min-w-0"><h4 class="font-semibold">${escapeHTML(item.title)}</h4><p class="mt-1 text-xs text-gray-400">${new Date(item.uploadedAt).toLocaleString('id-ID')} • ${escapeHTML(item.privacyStatus||'private')}</p></div><a class="rounded-lg bg-red-600 px-4 py-2 text-center text-sm font-semibold" href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer">Buka YouTube</a></div></article>`).join('');}
+  function renderRecentActivity(){const target=document.getElementById('recentActivity');if(!target)return;if(!history.length){target.innerHTML='<div class="py-8 text-center text-sm text-gray-500">Belum ada upload nyata.</div>';return;}target.innerHTML=history.slice(0,5).map(item=>`<a class="block rounded-lg p-3 hover:bg-white/5" href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer"><p class="truncate text-sm font-medium">${escapeHTML(item.title)}</p><p class="mt-1 text-xs text-gray-500">${new Date(item.uploadedAt).toLocaleString('id-ID')}</p></a>`).join('');}
+  function useTemplate(template){document.getElementById('videoTemplate').value=template;showPage('generator');showToast('Gaya dipilih',`Instruksi Gemini: ${template}`,'info');}
+
+  function formatDuration(seconds){if(!seconds)return 'Durasi tidak tersedia';const s=Math.round(seconds);return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
+
+    function checkDownloadUrl() {
     const input = document.getElementById('downloadUrl');
     const message = document.getElementById('downloadMessage');
     const previewWrap = document.getElementById('downloadPreviewWrap');
@@ -819,433 +617,13 @@
     downloadLink.setAttribute('download', decodeURIComponent(url.pathname.split('/').pop() || 'video'));
   }
 
-  function init() {
-    updateStats();
-    renderQueue();
-    renderHistory();
-    renderRecentActivity();
-    updateQueueBadge();
-    loadSettings();
-  }
-
-  function updateStats() {
-    document.getElementById('statVideos').textContent = stats.videos;
-    document.getElementById('statViews').textContent = stats.views.toLocaleString('id-ID');
-    document.getElementById('statSubs').textContent = stats.subs.toLocaleString('id-ID');
-    document.getElementById('statRevenue').textContent = stats.revenue;
-  }
-
-  function showPage(page) {
-    document.querySelectorAll('[id^="page-"]').forEach(p => p.classList.add('hidden'));
-    const pageEl = document.getElementById('page-' + page);
-    pageEl.classList.remove('hidden');
-    pageEl.classList.add('slide-in');
-    
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const navBtn = document.querySelector(`[data-page="${page}"]`);
-    if (navBtn) navBtn.classList.add('active');
-    
-    // Update bottom nav
-    document.querySelectorAll('[data-bottom]').forEach(b => {
-      b.classList.remove('text-red-400');
-      b.classList.add('text-gray-400');
-    });
-    const bottomBtn = document.querySelector(`[data-bottom="${page}"]`);
-    if (bottomBtn) {
-      bottomBtn.classList.remove('text-gray-400');
-      bottomBtn.classList.add('text-red-400');
-    }
-    
-    const titles = {
-      dashboard: ['Dashboard', 'Ringkasan aktivitas sistem'],
-      generator: ['Generator Konten', 'Buat video otomatis dengan AI'],
-      queue: ['Antrian Upload', 'Kelola video yang siap diupload'],
-      history: ['Riwayat', 'Semua video yang telah diupload'],
-      templates: ['Template', 'Pilih template video'],
-      settings: ['Pengaturan', 'Konfigurasi sistem dan API'],
-      download: ['Unduh Video', 'Unduh file video langsung yang Anda miliki izinnya']
-    };
-    document.getElementById('pageTitle').textContent = titles[page][0];
-    document.getElementById('pageSubtitle').textContent = titles[page][1];
-    
-    // Close sidebar on mobile
-    if (window.innerWidth < 1024) {
-      closeSidebar();
-    }
-    
-    window.scrollTo(0, 0);
-  }
-
-  function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('open');
-  }
-
-  function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('overlay').classList.remove('open');
-  }
-
-  function showToast(title, message, type = 'success') {
-    const toast = document.getElementById('toast');
-    const icon = document.getElementById('toastIcon');
-    document.getElementById('toastTitle').textContent = title;
-    document.getElementById('toastMessage').textContent = message;
-    
-    icon.className = 'w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0';
-    if (type === 'success') icon.classList.add('gradient-green');
-    else if (type === 'error') icon.classList.add('gradient-red');
-    else icon.classList.add('gradient-blue');
-    
-    toast.classList.remove('hidden');
-    clearTimeout(window.toastTimeout);
-    window.toastTimeout = setTimeout(() => toast.classList.add('hidden'), 3000);
-  }
-
-  function generateTitle() {
-    const template = document.getElementById('videoTemplate').value;
-    const titles = sampleTitles[template] || sampleTitles.facts;
-    document.getElementById('videoTitle').value = titles[Math.floor(Math.random() * titles.length)];
-    showToast('AI Generate', 'Judul berhasil dibuat');
-  }
-
-  function generateDescription() {
-    document.getElementById('videoDesc').value = sampleDescriptions[Math.floor(Math.random() * sampleDescriptions.length)];
-    showToast('AI Generate', 'Deskripsi berhasil dibuat');
-  }
-
-  function generateScript() {
-    document.getElementById('videoScript').value = sampleScripts[Math.floor(Math.random() * sampleScripts.length)];
-    updateScriptStats();
-    showToast('AI Generate', 'Script berhasil dibuat');
-  }
-
-  function updateScriptStats() {
-    const script = document.getElementById('videoScript').value;
-    const chars = script.length;
-    const words = script.trim() ? script.trim().split(/\s+/).length : 0;
-    const minutes = Math.round(words / 150);
-    document.getElementById('scriptStats').textContent = `${chars} karakter • ${words} kata • ~${minutes} menit`;
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const script = document.getElementById('videoScript');
-    if (script) script.addEventListener('input', updateScriptStats);
-    const downloadUrl = document.getElementById('downloadUrl');
-    if (downloadUrl) downloadUrl.addEventListener('keydown', event => {
-      if (event.key === 'Enter') checkDownloadUrl();
-    });
+  document.addEventListener('DOMContentLoaded',async()=>{
+    const script=document.getElementById('videoScript');script?.addEventListener('input',updateScriptStats);
+    document.getElementById('videoFile')?.addEventListener('change',event=>{const file=event.target.files?.[0];setText('videoFileName',file?`${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`:'Atau gunakan klip Gemini Omni yang selesai dibuat.');});
+    document.getElementById('downloadUrl')?.addEventListener('keydown',event=>{if(event.key==='Enter')checkDownloadUrl();});
+    window.addEventListener('resize',()=>{if(window.innerWidth>=1024)closeSidebar();});
+    if(await checkAuth()) await initializeApp();
   });
-
-  function generateThumbnail() {
-    const colors = ['from-red-600 via-purple-600 to-blue-600', 'from-yellow-500 via-red-500 to-pink-500', 'from-green-500 via-teal-500 to-blue-500', 'from-purple-600 via-pink-500 to-red-500'];
-    const preview = document.getElementById('thumbnailPreview');
-    preview.className = `aspect-video bg-gradient-to-br ${colors[Math.floor(Math.random() * colors.length)]} rounded-xl flex items-center justify-center mb-3`;
-    preview.innerHTML = '<span class="text-white font-bold text-sm sm:text-lg">✨ Thumbnail AI Generated</span>';
-    showToast('AI Generate', 'Thumbnail berhasil dibuat');
-  }
-
-  function addToQueue() {
-    const title = document.getElementById('videoTitle').value;
-    if (!title) {
-      showToast('Error', 'Judul video harus diisi', 'error');
-      return;
-    }
-    
-    const video = {
-      id: Date.now(),
-      title: title,
-      template: document.getElementById('videoTemplate').value,
-      voice: document.getElementById('videoVoice').value,
-      duration: document.getElementById('videoDuration').value,
-      quality: document.getElementById('videoQuality').value,
-      visibility: document.getElementById('videoVisibility').value,
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    };
-    
-    queue.push(video);
-    saveQueue();
-    renderQueue();
-    updateQueueBadge();
-    showToast('Berhasil', 'Video ditambahkan ke antrian');
-    
-    document.getElementById('videoTitle').value = '';
-    document.getElementById('videoDesc').value = '';
-    document.getElementById('videoScript').value = '';
-    updateScriptStats();
-  }
-
-  function generateAndUpload() {
-    const title = document.getElementById('videoTitle').value;
-    if (!title) {
-      showToast('Error', 'Judul video harus diisi', 'error');
-      return;
-    }
-    
-    const video = {
-      id: Date.now(),
-      title: title,
-      template: document.getElementById('videoTemplate').value,
-      duration: document.getElementById('videoDuration').value,
-      quality: document.getElementById('videoQuality').value,
-      status: 'processing',
-      createdAt: new Date().toISOString()
-    };
-    
-    queue.push(video);
-    saveQueue();
-    renderQueue();
-    updateQueueBadge();
-    showPage('queue');
-    showToast('Memproses', 'Sedang generate dan upload...');
-    setTimeout(() => processQueue(), 500);
-  }
-
-  function processQueue() {
-    if (queue.length === 0) {
-      showToast('Info', 'Antrian kosong', 'info');
-      return;
-    }
-    
-    const pendingVideos = queue.filter(v => v.status === 'pending' || v.status === 'processing');
-    if (pendingVideos.length === 0) {
-      showToast('Info', 'Tidak ada video perlu diproses', 'info');
-      return;
-    }
-    
-    pendingVideos.forEach((video, index) => {
-      video.status = 'processing';
-      setTimeout(() => {
-        video.status = 'uploaded';
-        video.uploadedAt = new Date().toISOString();
-        video.views = Math.floor(Math.random() * 1000);
-        video.likes = Math.floor(Math.random() * 100);
-        
-        stats.videos++;
-        stats.views += video.views;
-        stats.subs += Math.floor(Math.random() * 10);
-        stats.revenue += Math.floor(video.views * 0.003);
-        
-        history.unshift(video);
-        queue = queue.filter(v => v.id !== video.id);
-        
-        saveQueue();
-        saveHistory();
-        saveStats();
-        renderQueue();
-        renderHistory();
-        renderRecentActivity();
-        updateStats();
-        updateQueueBadge();
-        
-        if (index === pendingVideos.length - 1) {
-          showToast('Selesai', `${pendingVideos.length} video berhasil diupload`);
-        }
-      }, 2000 + (index * 1500));
-    });
-    
-    renderQueue();
-  }
-
-  function removeFromQueue(id) {
-    queue = queue.filter(v => v.id !== id);
-    saveQueue();
-    renderQueue();
-    updateQueueBadge();
-    showToast('Dihapus', 'Video dihapus dari antrian');
-  }
-
-  function clearQueue() {
-    if (queue.length === 0) return;
-    if (confirm('Yakin ingin mengosongkan antrian?')) {
-      queue = [];
-      saveQueue();
-      renderQueue();
-      updateQueueBadge();
-      showToast('Dihapus', 'Antrian dikosongkan');
-    }
-  }
-
-  function clearHistory() {
-    if (history.length === 0) return;
-    if (confirm('Yakin ingin menghapus semua riwayat?')) {
-      history = [];
-      saveHistory();
-      renderHistory();
-      renderRecentActivity();
-      showToast('Dihapus', 'Riwayat dikosongkan');
-    }
-  }
-
-  function renderQueue() {
-    const list = document.getElementById('queueList');
-    if (queue.length === 0) {
-      list.innerHTML = `<div class="text-center py-12 text-gray-500">
-        <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-        <p class="text-sm">Antrian kosong</p>
-        <p class="text-xs mt-1">Tambahkan video dari Generator</p>
-      </div>`;
-      return;
-    }
-    
-    const statusColors = { pending: 'bg-gray-500/20 text-gray-300', processing: 'bg-yellow-500/20 text-yellow-300', uploaded: 'bg-green-500/20 text-green-300' };
-    const statusText = { pending: 'Menunggu', processing: 'Memproses...', uploaded: 'Terupload' };
-    const statusDot = { pending: 'status-offline', processing: 'status-processing', uploaded: 'status-online' };
-    
-    list.innerHTML = queue.map(v => `
-      <div class="glass rounded-xl p-3 sm:p-4 flex items-center gap-3 slide-in">
-        <div class="w-12 h-12 sm:w-16 sm:h-10 gradient-red rounded-lg flex items-center justify-center flex-shrink-0">
-          <svg class="w-5 h-5" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </div>
-        <div class="flex-1 min-w-0">
-          <p class="font-semibold text-xs sm:text-sm truncate">${v.title}</p>
-          <div class="flex flex-wrap items-center gap-2 text-[10px] sm:text-xs text-gray-400 mt-1">
-            <span>📹 ${v.quality || 1080}p</span>
-            <span>⏱️ ${Math.round(v.duration/60)}m</span>
-            <span class="hidden sm:inline">🎨 ${v.template}</span>
-          </div>
-        </div>
-        <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-          <span class="status-dot ${statusDot[v.status]} hidden sm:inline-block"></span>
-          <span class="text-[10px] sm:text-xs px-2 py-1 rounded-full ${statusColors[v.status]}">${statusText[v.status]}</span>
-        </div>
-        ${v.status === 'pending' ? `<button onclick="removeFromQueue(${v.id})" class="text-red-400 hover:text-red-300 p-2 touch-target flex-shrink-0">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
-        </button>` : ''}
-      </div>
-    `).join('');
-  }
-
-  function renderHistory() {
-    const list = document.getElementById('historyList');
-    if (history.length === 0) {
-      list.innerHTML = `<div class="text-center py-12 text-gray-500">
-        <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        <p class="text-sm">Belum ada riwayat</p>
-        <p class="text-xs mt-1">Video yang berhasil diupload akan muncul di sini</p>
-      </div>`;
-      return;
-    }
-    
-    list.innerHTML = history.map(v => {
-      const date = new Date(v.uploadedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
-      return `
-        <div class="glass rounded-xl p-3 sm:p-4 flex items-center gap-3 slide-in">
-          <div class="w-16 h-12 sm:w-20 sm:h-12 gradient-red rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="font-semibold text-xs sm:text-sm truncate">${v.title}</p>
-            <div class="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-400 mt-1">
-              <span>📅 ${date}</span>
-              <span>👁️ ${v.views?.toLocaleString('id-ID') || 0}</span>
-              <span class="hidden sm:inline">👍 ${v.likes || 0}</span>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 flex-shrink-0">
-            <span class="status-dot status-online hidden sm:inline-block"></span>
-            <span class="text-[10px] sm:text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-300">✓</span>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  function renderRecentActivity() {
-    const container = document.getElementById('recentActivity');
-    if (history.length === 0) {
-      container.innerHTML = `<div class="text-center py-8 text-gray-500">
-        <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-        <p class="text-sm">Belum ada aktivitas</p>
-        <p class="text-xs mt-1">Mulai generate video pertama Anda</p>
-      </div>`;
-      return;
-    }
-    
-    container.innerHTML = history.slice(0, 5).map(v => {
-      const date = new Date(v.uploadedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
-      return `
-        <div class="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg hover:bg-white/5 transition">
-          <div class="w-9 h-9 sm:w-10 sm:h-10 gradient-red rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-4 h-4" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-xs sm:text-sm font-medium truncate">${v.title}</p>
-            <p class="text-[10px] sm:text-xs text-gray-500">${date}</p>
-          </div>
-          <span class="text-[10px] sm:text-xs text-green-400 flex-shrink-0">+${v.views || 0}</span>
-        </div>
-      `;
-    }).join('');
-  }
-
-  function updateQueueBadge() {
-    const badge = document.getElementById('queueBadge');
-    const badgeBottom = document.getElementById('queueBadgeBottom');
-    if (queue.length > 0) {
-      badge.textContent = queue.length;
-      badge.classList.remove('hidden');
-      if (badgeBottom) {
-        badgeBottom.textContent = queue.length;
-        badgeBottom.classList.remove('hidden');
-      }
-    } else {
-      badge.classList.add('hidden');
-      if (badgeBottom) badgeBottom.classList.add('hidden');
-    }
-  }
-
-  function useTemplate(template) {
-    showPage('generator');
-    document.getElementById('videoTemplate').value = template;
-    const titles = sampleTitles[template] || sampleTitles.facts;
-    document.getElementById('videoTitle').value = titles[0];
-    showToast('Template Dipilih', `Template "${template}" dipilih`);
-  }
-
-  function connectYouTube() {
-    const key = document.getElementById('apiKey').value;
-    if (!key) {
-      showToast('Error', 'API Key harus diisi', 'error');
-      return;
-    }
-    showToast('Berhasil', 'Terhubung ke YouTube API');
-  }
-
-  function saveSettings() {
-    const settings = {
-      apiKey: document.getElementById('apiKey').value,
-      clientId: document.getElementById('clientId').value,
-      clientSecret: document.getElementById('clientSecret').value,
-      autoUpload: document.getElementById('autoUpload').checked
-    };
-    localStorage.setItem('autotube_settings', JSON.stringify(settings));
-    showToast('Tersimpan', 'Pengaturan berhasil disimpan');
-  }
-
-  function loadSettings() {
-    const settings = JSON.parse(localStorage.getItem('autotube_settings') || '{}');
-    if (settings.apiKey) document.getElementById('apiKey').value = settings.apiKey;
-    if (settings.clientId) document.getElementById('clientId').value = settings.clientId;
-    if (settings.clientSecret) document.getElementById('clientSecret').value = settings.clientSecret;
-    if (settings.autoUpload) document.getElementById('autoUpload').checked = settings.autoUpload;
-  }
-
-  function saveQueue() { localStorage.setItem('autotube_queue', JSON.stringify(queue)); }
-  function saveHistory() { localStorage.setItem('autotube_history', JSON.stringify(history)); }
-  function saveStats() { localStorage.setItem('autotube_stats', JSON.stringify(stats)); }
-
-  // Close sidebar on resize to desktop
-  window.addEventListener('resize', () => {
-    if (window.innerWidth >= 1024) {
-      closeSidebar();
-    }
-  });
-
-  init();
 </script>
 
 </body>

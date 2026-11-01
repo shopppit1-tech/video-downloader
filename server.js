@@ -2819,7 +2819,7 @@ app.get(
 /* =========================================================
    API 404
 ========================================================= */
-
+app.use(require("./autotube-routes")({ baseUrl: BASE_URL, tempDir: TEMP_DIR }));
 app.use(
   "/api",
   (req, res) => {
