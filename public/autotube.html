@@ -25,6 +25,14 @@
   .slide-in { animation: slideIn 0.4s ease-out; }
   @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
   .slide-in-left { animation: slideInLeft 0.3s ease-out; }
+  @media (max-width: 767px) {
+    .glass { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background-color: rgba(17,17,25,0.96); }
+    .card-hover:hover { transform: none; }
+    .pulse-red, .slide-in, .slide-in-left { animation: none !important; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  }
   .nav-item { transition: all 0.2s; }
   .nav-item:hover { background: rgba(255,255,255,0.05); }
   .nav-item.active { background: rgba(255,0,0,0.1); border-left: 3px solid #ff0000; }
@@ -229,7 +237,17 @@
         </section>
         <section class="glass rounded-2xl p-4 sm:p-6 space-y-4">
           <h3 class="font-bold text-lg">Sumber video untuk upload</h3>
-          <div><label for="videoFile" class="mb-2 block text-sm text-gray-400">Pilih video lokal (maks. 100 MB)</label><input id="videoFile" type="file" accept="video/mp4,video/quicktime,video/webm,video/x-m4v" class="block w-full text-xs text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-red-600 file:px-3 file:py-2 file:text-white"><p id="videoFileName" class="mt-2 text-xs text-gray-500">Atau gunakan klip Gemini Omni yang selesai dibuat.</p></div>
+          <div><label for="videoFile" class="mb-2 block text-sm text-gray-400">Pilih video lokal (maks. 100 MB)</label><input id="videoFile" type="file" accept="video/mp4,video/quicktime,video/webm,video/x-m4v" class="block w-full text-xs text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-red-600 file:px-3 file:py-2 file:text-white"><p id="videoFileName" class="mt-2 text-xs text-gray-500">Atau pilih video dari Google Drive.</p></div>
+          <div class="rounded-xl border border-white/10 bg-black/20 p-4 space-y-3">
+            <h4 class="font-semibold">Video dari Google Drive</h4>
+            <div><label for="driveFolderUrl" class="mb-2 block text-xs text-gray-400">Link folder Drive (bisa diganti)</label><input id="driveFolderUrl" type="url" class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-3 text-xs" placeholder="https://drive.google.com/drive/folders/…"></div>
+            <button onclick="loadDriveVideos()" class="w-full glass rounded-xl py-3 text-sm hover:bg-white/10">Muat video dari folder</button>
+            <select id="driveVideoSelect" class="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm"><option value="">Pilih video setelah daftar dimuat</option></select>
+            <p id="driveVideoStatus" class="text-xs text-gray-400" role="status" aria-live="polite">Folder yang Anda kirim sudah diisi sebagai default.</p>
+            <div><label for="driveVideoContext" class="mb-2 block text-xs text-gray-400">Konteks/kata kunci tambahan untuk Gemini (opsional)</label><textarea id="driveVideoContext" rows="2" maxlength="2000" class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-3 text-sm" placeholder="Contoh: edukasi otomotif untuk pemula"></textarea></div>
+            <button id="driveMetadataButton" onclick="generateDriveMetadata()" class="w-full gradient-purple rounded-xl py-3 text-sm font-semibold">Analisis video & buat metadata SEO</button>
+            <p class="text-[11px] text-gray-500">Analisis mengirim video pilihan ke Gemini, lalu file sementara dihapus. Maks. 200 MB. Periksa/edit metadata sebelum menekan Upload.</p>
+          </div>
           <div><label for="videoVisibility" class="mb-2 block text-sm text-gray-400">Visibilitas YouTube</label><select id="videoVisibility" class="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm"><option value="private" selected>Privat (disarankan)</option><option value="unlisted">Tidak publik</option><option value="public">Publik</option></select></div>
           <button id="uploadVideoButton" onclick="uploadToYoutube()" class="w-full gradient-red rounded-xl py-3 font-semibold">Upload ke YouTube</button>
           <p id="uploadStatus" class="text-xs text-gray-400" role="status" aria-live="polite">Upload memerlukan koneksi akun YouTube.</p>
@@ -309,7 +327,7 @@
 
 
   <section id="page-settings" class="hidden p-4 sm:p-6 lg:p-8 space-y-4">
-    <section class="glass rounded-2xl p-4 sm:p-6"><h3 class="font-bold text-lg">Koneksi YouTube</h3><p id="settingsYoutubeStatus" class="mt-2 text-sm text-gray-400">Memeriksa konfigurasi OAuth…</p><div class="mt-4 flex flex-col sm:flex-row gap-3"><button onclick="connectYouTube()" class="gradient-red rounded-xl px-5 py-3 font-semibold">Hubungkan akun Google / YouTube</button><button onclick="disconnectYouTube()" class="glass rounded-xl px-5 py-3 text-sm">Putuskan koneksi</button></div><p class="mt-3 text-xs text-gray-500">AutoTube meminta izin YouTube upload. Token disimpan terenkripsi sebagai cookie HttpOnly pada browser ini; rahasia OAuth tetap di server.</p></section>
+    <section class="glass rounded-2xl p-4 sm:p-6"><h3 class="font-bold text-lg">Koneksi Google Drive & YouTube</h3><p id="settingsYoutubeStatus" class="mt-2 text-sm text-gray-400">Memeriksa konfigurasi OAuth…</p><p id="settingsDriveStatus" class="mt-2 text-sm text-gray-400">Memeriksa izin Drive…</p><div class="mt-4 flex flex-col sm:flex-row gap-3"><button onclick="connectYouTube()" class="gradient-red rounded-xl px-5 py-3 font-semibold">Hubungkan / izinkan Drive</button><button onclick="disconnectYouTube()" class="glass rounded-xl px-5 py-3 text-sm">Putuskan koneksi</button></div><p class="mt-3 text-xs text-gray-500">Izin YouTube hanya untuk upload. Izin Drive bersifat read-only; Google menampilkan cakupan akses seluruh Drive, tetapi AutoTube hanya menampilkan video dari folder yang Anda masukkan. Aktifkan Drive API dan tambahkan scope Drive di Google Cloud OAuth, lalu hubungkan ulang. Gemini menerima hanya video pilihan saat Anda menekan Analisis. Token disimpan terenkripsi sebagai cookie HttpOnly.</p></section>
     <section class="glass rounded-2xl p-4 sm:p-6"><h3 class="font-bold text-lg">Konfigurasi server</h3><p id="settingsGeminiStatus" class="mt-2 text-sm text-gray-400">Memeriksa Gemini…</p><div class="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 text-xs text-gray-400"><p>Variabel Render yang diperlukan:</p><ul class="mt-2 list-disc space-y-1 pl-5"><li><code>AUTOTUBE_ACCESS_PASSWORD</code> (minimal 12 karakter; melindungi fitur berbiaya)</li><li><code>GEMINI_API_KEY</code></li><li><code>YOUTUBE_CLIENT_ID</code></li><li><code>YOUTUBE_CLIENT_SECRET</code></li><li><code>YOUTUBE_TOKEN_ENCRYPTION_KEY</code> (acak, minimal 24 karakter)</li></ul><p class="mt-3">Redirect URI OAuth: <code>https://video-downloader-soj1.onrender.com/api/youtube/callback</code></p></div></section>
     <section class="glass rounded-2xl p-4 sm:p-6"><h3 class="font-bold text-lg">Keluar</h3><p class="mt-2 text-sm text-gray-400">Keluar menghapus sesi AutoTube dari browser ini.</p><button onclick="logout()" class="mt-4 glass rounded-xl px-5 py-3 text-sm">Keluar dari AutoTube</button></section>
   </section>
@@ -362,6 +380,8 @@
   let appStatus = null;
   let generatedJobId = '';
   let selectedDownload = null;
+  let driveVideos = [];
+  const defaultDriveFolderUrl = 'https://drive.google.com/drive/folders/1a8lo8Vkg2fI1RkQ9xnl0oDZGCG0E3qwd';
 
   function safeRead(key, fallback) {
     try { const value = JSON.parse(localStorage.getItem(key) || 'null'); return Array.isArray(value) ? value : fallback; }
@@ -443,7 +463,7 @@
     try { appStatus = await apiJSON('/api/autotube/status'); } catch (error) { showLogin(error.message); return; }
     updateIntegrationStatus(); renderQueue(); renderHistory(); renderRecentActivity(); updateStats();
     const params = new URLSearchParams(location.search);
-    if (params.get('youtube') === 'connected') showToast('YouTube terhubung', 'Izin upload sudah diberikan.');
+    if (params.get('youtube') === 'connected') showToast('Google terhubung', 'Periksa status Drive dan YouTube di Pengaturan.');
     if (params.get('youtube') === 'denied') showToast('Koneksi dibatalkan', 'Anda tidak memberi izin YouTube.', 'error');
     if (params.get('youtube') === 'error') showToast('OAuth gagal', 'Periksa konfigurasi OAuth di Render dan Google Cloud.', 'error');
     if (params.has('youtube')) window.history.replaceState({}, '', location.pathname);
@@ -453,11 +473,13 @@
     if (!appStatus) return;
     const geminiReady = Boolean(appStatus.geminiConfigured);
     const ytReady = Boolean(appStatus.youtubeConnected);
+    const driveReady = Boolean(appStatus.driveConnected);
     const gText = geminiReady ? `API key terpasang • model teks ${escapeHTML('Gemini')}, video ${escapeHTML(appStatus.videoModel || 'Gemini Omni')}` : 'GEMINI_API_KEY belum ditambahkan di Render.';
     const yText = ytReady ? 'Akun sudah memberi izin upload.' : (appStatus.youtubeConfigured ? 'Belum dihubungkan; hubungkan akun di Pengaturan.' : 'Kredensial OAuth YouTube belum lengkap di Render.');
     setText('geminiStatusText', gText); setText('youtubeStatusText', yText);
     setText('settingsGeminiStatus', geminiReady ? 'Gemini/Gemini Omni API key terpasang di server.' : 'Gemini belum dikonfigurasi. Fitur terkait tidak dapat digunakan sebelum GEMINI_API_KEY ditambahkan.');
-    setText('settingsYoutubeStatus', ytReady ? 'Akun YouTube terhubung.' : (appStatus.youtubeConfigured ? 'OAuth siap. Tekan Hubungkan akun untuk memberi izin.' : 'Tambahkan YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, dan YOUTUBE_TOKEN_ENCRYPTION_KEY di Render.'));
+    setText('settingsYoutubeStatus', ytReady ? 'Izin upload YouTube sudah terhubung.' : (appStatus.youtubeConfigured ? 'OAuth siap; hubungkan akun Google untuk mengizinkan upload.' : 'Tambahkan YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, dan YOUTUBE_TOKEN_ENCRYPTION_KEY di Render.'));
+    setText('settingsDriveStatus', driveReady ? 'Izin baca Drive sudah aktif.' : 'Izin Drive belum aktif; hubungkan ulang dan setujui permintaan baca Drive.');
     setText('statGemini', geminiReady ? 'Siap' : 'Belum diatur'); setText('statYoutube', ytReady ? 'Terhubung' : 'Belum terhubung');
     const header = document.getElementById('youtubeHeaderStatus');
     header.textContent = ytReady ? '● YouTube terhubung' : '○ YouTube belum terhubung';
@@ -549,13 +571,63 @@
     finally{button.disabled=false;button.textContent='Buat klip dengan Gemini Omni';}
   }
 
+  function driveFolderIdFromInput() {
+    const raw=document.getElementById('driveFolderUrl').value.trim();
+    const match=raw.match(/\/folders\/([A-Za-z0-9_-]{10,200})/);
+    if(match)return match[1];
+    return /^[A-Za-z0-9_-]{10,200}$/.test(raw)?raw:'';
+  }
+  async function loadDriveVideos() {
+    const folderId=driveFolderIdFromInput();
+    const select=document.getElementById('driveVideoSelect');
+    if(!folderId){showToast('Folder Drive tidak valid','Masukkan link folder Google Drive yang benar.','error');return;}
+    localStorage.setItem('autotube_drive_folder_url',document.getElementById('driveFolderUrl').value.trim());
+    if(!appStatus?.driveConnected){setText('driveVideoStatus','Hubungkan ulang akun Google di Pengaturan untuk memberi izin Drive.');showPage('settings');return;}
+    setText('driveVideoStatus','Memuat daftar video…');
+    try{
+      const data=await apiJSON(`/api/drive/videos?folderId=${encodeURIComponent(folderId)}`);
+      driveVideos=data.files||[];select.replaceChildren();
+      const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent=driveVideos.length?'Pilih video dari folder':'Tidak ada video yang memenuhi batas 200 MB';select.appendChild(placeholder);
+      for(const file of driveVideos){const option=document.createElement('option');option.value=file.id;option.textContent=`${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;select.appendChild(option);}
+      setText('driveVideoStatus',driveVideos.length?`${driveVideos.length} video ditemukan. Daftar berisi maksimal 50 video terbaru.`:'Folder belum berisi video yang bisa diproses.');
+    }catch(error){setText('driveVideoStatus',error.message);showToast('Gagal membaca Drive',error.message,'error');}
+  }
+  async function generateDriveMetadata() {
+    const fileId=document.getElementById('driveVideoSelect').value;
+    const folderId=driveFolderIdFromInput();
+    if(!fileId||!folderId){showToast('Pilih video Drive','Muat daftar folder lalu pilih video terlebih dahulu.','error');return;}
+    const file=driveVideos.find(item=>item.id===fileId);
+    if(!confirm(`Kirim video “${file?.name||'pilihan Anda'}” ke Gemini untuk dianalisis dan membuat judul, deskripsi SEO, serta tag? File sementara akan dihapus setelah proses selesai.`))return;
+    const button=document.getElementById('driveMetadataButton');button.disabled=true;button.textContent='Menyiapkan analisis…';setText('driveVideoStatus','Mengirim video pilihan ke Gemini…');
+    try{
+      const start=await apiJSON('/api/autotube/drive-metadata',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({driveFileId:fileId,driveFolderId:folderId,context:document.getElementById('driveVideoContext').value})});
+      for(let i=0;i<120;i++){
+        await wait(4000);const job=await apiJSON(`/api/autotube/drive-metadata/${encodeURIComponent(start.jobId)}`);
+        setText('driveVideoStatus',job.status==='ready'?'Metadata siap. Periksa dan edit sebelum upload.':job.status==='failed'?`Analisis gagal: ${job.error}`:`Gemini menganalisis video… ${job.progress||0}%`);
+        if(job.status==='failed')throw new Error(job.error||'Analisis Gemini gagal.');
+        if(job.status==='ready'){
+          document.getElementById('videoTitle').value=job.metadata.title;
+          document.getElementById('videoDesc').value=job.metadata.description;
+          document.getElementById('videoTags').value=(job.metadata.tags||[]).join(', ');
+          document.getElementById('videoFile').value='';generatedJobId='';
+          showToast('Metadata siap','Tinjau judul, deskripsi, dan tag sebelum upload.');return;
+        }
+      }
+      throw new Error('Analisis masih berjalan terlalu lama. Muat ulang status atau coba video yang lebih singkat.');
+    }catch(error){setText('driveVideoStatus',`Gagal: ${error.message}`);showToast('Analisis gagal',error.message,'error');}
+    finally{button.disabled=false;button.textContent='Analisis video & buat metadata SEO';}
+  }
+
   async function uploadToYoutube(){
     if(!appStatus?.youtubeConnected){showToast('Hubungkan YouTube','Buka Pengaturan dan hubungkan akun terlebih dahulu.','error');showPage('settings');return;}
     const input=document.getElementById('videoFile');const file=input.files?.[0];
-    if(!file&&!generatedJobId){showToast('Video diperlukan','Pilih file video atau buat klip Gemini Omni terlebih dahulu.','error');return;}
+    const driveFileId=document.getElementById('driveVideoSelect').value;
+    if(!file&&!generatedJobId&&!driveFileId){showToast('Video diperlukan','Pilih video lokal, Drive, atau buat klip Gemini Omni terlebih dahulu.','error');return;}
     const title=document.getElementById('videoTitle').value.trim();if(!title){showToast('Judul diperlukan','Isi judul YouTube terlebih dahulu.','error');return;}
-    const form=new FormData();if(file)form.append('video',file);else form.append('jobId',generatedJobId);
-    form.append('title',title);form.append('description',document.getElementById('videoDesc').value);form.append('tags',document.getElementById('videoTags').value);form.append('privacyStatus',document.getElementById('videoVisibility').value);
+    const privacyStatus=document.getElementById('videoVisibility').value;
+    if(!confirm(`Upload “${title}” ke YouTube dengan status ${privacyStatus.toUpperCase()}?`))return;
+    const form=new FormData();if(file)form.append('video',file);else if(generatedJobId)form.append('jobId',generatedJobId);else{form.append('driveFileId',driveFileId);form.append('driveFolderId',driveFolderIdFromInput());}
+    form.append('title',title);form.append('description',document.getElementById('videoDesc').value);form.append('tags',document.getElementById('videoTags').value);form.append('privacyStatus',privacyStatus);
     const button=document.getElementById('uploadVideoButton');button.disabled=true;button.textContent='Mengunggah ke YouTube…';setText('uploadStatus','Upload berjalan; jangan tutup halaman sampai selesai.');
     try{
       const response=await fetch('/api/youtube/upload',{method:'POST',body:form,credentials:'same-origin'});const data=await response.json().catch(()=>({}));
@@ -563,7 +635,7 @@
       if(!response.ok)throw new Error(data.error||`Upload gagal (HTTP ${response.status}).`);
       history.unshift({id:data.videoId,title:data.title,url:data.url,privacyStatus:data.privacyStatus,uploadedAt:data.uploadedAt});history=history.slice(0,100);saveHistory();renderHistory();renderRecentActivity();updateStats();
       setText('uploadStatus',`Upload dikonfirmasi YouTube: ${data.url}`);showToast('Upload berhasil',`Video ${data.videoId} sudah dikirim ke YouTube.`);
-      if(file)input.value='';setText('videoFileName','Atau gunakan klip Gemini Omni yang selesai dibuat.');
+      if(file)input.value='';if(driveFileId){document.getElementById('driveVideoSelect').value='';generatedJobId='';}setText('videoFileName','Pilih video lokal atau dari Google Drive.');
     }catch(error){setText('uploadStatus',`Upload gagal: ${error.message}`);showToast('Upload gagal',error.message,'error');}
     finally{button.disabled=false;button.textContent='Upload ke YouTube';}
   }
@@ -641,7 +713,9 @@
 
   document.addEventListener('DOMContentLoaded',async()=>{
     const script=document.getElementById('videoScript');script?.addEventListener('input',updateScriptStats);
-    document.getElementById('videoFile')?.addEventListener('change',event=>{const file=event.target.files?.[0];setText('videoFileName',file?`${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`:'Atau gunakan klip Gemini Omni yang selesai dibuat.');});
+    const folderInput=document.getElementById('driveFolderUrl');if(folderInput)folderInput.value=localStorage.getItem('autotube_drive_folder_url')||defaultDriveFolderUrl;
+    document.getElementById('videoFile')?.addEventListener('change',event=>{const file=event.target.files?.[0];if(file){document.getElementById('driveVideoSelect').value='';generatedJobId='';}setText('videoFileName',file?`${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`:'Pilih video lokal atau dari Google Drive.');});
+    document.getElementById('driveVideoSelect')?.addEventListener('change',event=>{if(event.target.value){document.getElementById('videoFile').value='';generatedJobId='';const selected=driveVideos.find(item=>item.id===event.target.value);if(selected&&!document.getElementById('videoTitle').value.trim())document.getElementById('videoTitle').value=selected.name.replace(/\.[^.]+$/,'').slice(0,100);setText('videoFileName',selected?`Video Drive dipilih: ${selected.name}`:'Video Drive dipilih.');}});
     document.getElementById('downloadUrl')?.addEventListener('keydown',event=>{if(event.key==='Enter')checkDownloadUrl();});
     window.addEventListener('resize',()=>{if(window.innerWidth>=1024)closeSidebar();});
     if(await checkAuth()) await initializeApp();
