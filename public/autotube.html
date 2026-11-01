@@ -136,11 +136,11 @@
     <div class="p-3 sm:p-4 border-t border-white/10 hidden lg:block">
       <div class="glass rounded-xl p-3 sm:p-4">
         <div class="flex items-center gap-2 mb-2">
-          <span class="status-dot status-online"></span>
+          <span id="systemStatusDot" class="status-dot status-processing"></span>
           <span class="text-xs text-gray-400">Status Sistem</span>
         </div>
-        <p class="text-sm font-medium text-green-400">Online & Aktif</p>
-        <p class="text-xs text-gray-500 mt-1">Server berjalan normal</p>
+        <p id="systemStatusText" class="text-sm font-medium text-amber-300">Memeriksa server…</p>
+        <p id="systemStatusDetail" class="text-xs text-gray-500 mt-1">Status akan diambil dari server.</p>
       </div>
     </div>
   </aside>
@@ -409,13 +409,35 @@
     try { await apiJSON('/api/autotube/logout', {method:'POST'}); } catch (_) {}
     showLogin('Anda telah keluar. Masukkan kata sandi untuk masuk kembali.');
   }
+  function updateSystemStatus(status) {
+    const dot = document.getElementById('systemStatusDot');
+    const title = document.getElementById('systemStatusText');
+    const detail = document.getElementById('systemStatusDetail');
+    if (!dot || !title || !detail) return;
+    if (!status) {
+      dot.className = 'status-dot status-offline';
+      title.className = 'text-sm font-medium text-gray-300';
+      title.textContent = 'Server tidak terjangkau';
+      detail.textContent = 'Status layanan belum dapat dibaca.';
+      return;
+    }
+    dot.className = 'status-dot status-online';
+    title.className = 'text-sm font-medium text-green-400';
+    title.textContent = 'Server merespons';
+    const missing = [];
+    if (!status.accessPasswordConfigured) missing.push('kata sandi akses belum diatur');
+    if (!status.geminiConfigured) missing.push('Gemini belum dikonfigurasi');
+    if (!status.youtubeConfigured) missing.push('OAuth YouTube belum lengkap');
+    detail.textContent = missing.length ? `Belum siap: ${missing.join(' • ')}.` : `Gemini siap; akun YouTube ${status.youtubeConnected ? 'terhubung' : 'belum terhubung'}.`;
+  }
   async function checkAuth() {
     try {
       appStatus = await apiJSON('/api/autotube/status');
+      updateSystemStatus(appStatus);
       if (!appStatus.accessPasswordConfigured) { showLogin('AutoTube dikunci sampai AUTOTUBE_ACCESS_PASSWORD (minimal 12 karakter) ditambahkan di Render.'); return false; }
       if (!appStatus.authenticated) { showLogin(); return false; }
       hideLogin(); return true;
-    } catch (error) { showLogin(error.message); return false; }
+    } catch (error) { updateSystemStatus(null); showLogin(error.message); return false; }
   }
   async function initializeApp() {
     try { appStatus = await apiJSON('/api/autotube/status'); } catch (error) { showLogin(error.message); return; }
